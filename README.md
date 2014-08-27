@@ -26,3 +26,10 @@ connection.
 To set the server you want to connect to when using PowerCLI, replace 
 **\_\_\_VCENTER\_SERVER\_\_\_** with the fully qualified domain name of your 
 vSphere/vCenter server.
+
+Conventions
+===========
+
+Where possible I will be following [Don Jones' Best 
+Practices](http://windowsitpro.com/blog/my-12-powershell-best-practices) and
+[Darkoperator's Style Guide](https://github.com/darkoperator/PSStyleGuide/blob/master/English.md).
