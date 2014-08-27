@@ -88,7 +88,7 @@
       write-verbose "Already connected to vCenter"
     } else {
       write-verbose "Not connected to vCenter, connecting"
-      Connect-VIServer <your default vcenter server here> -WarningAction SilentlyContinue > $null
+      Connect-VIServer ___VCENTER_SERVER___ -WarningAction SilentlyContinue > $null
     }
   }
 
