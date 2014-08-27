@@ -3,13 +3,18 @@
   .SYNOPSIS
   Find vSphere VMs that need disk consolidation.
   .DESCRIPTION
-  Checks vCenter for Virtual Machines that require disk consolidation. You can specify a sepcific VM, a list of VMs and/or a location in vSphere (like a folder) or not specify any arguments to get every VM registered to the currently connected vCenter Server.
+  Checks vCenter for Virtual Machines that require disk consolidation. You can 
+  specify a sepcific VM, a list of VMs and/or a location in vSphere (like a 
+  folder) or not specify any arguments to get every VM registered to the 
+  currently connected vCenter Server.
 
-  Will connect to 'vcenter.hawk-i.govt.nz' if you have not connected to a vCenter server with the Connect-VIServer cmdlet.
+  Will connect to 'vcenter.hawk-i.govt.nz' if you have not connected to a 
+  vCenter server with the Connect-VIServer cmdlet.
   .EXAMPLE
   Get-ConsolidationNeeded -Name AD1,AD2
 
-  Checks the two specified VMs (AD1 and AD2) to determine if they require disk consolidation.
+  Checks the two specified VMs (AD1 and AD2) to determine if they require disk 
+  consolidation.
   .EXAMPLE
   Get-ConsolidationNeeded -Location TestDev
 
@@ -17,15 +22,19 @@
   .EXAMPLE
   Get-ConsolidationNeeded -Name isolated-* -Location Development
 
-  Checks all VMs in Vsphere location "Development" whose name begins with isolated- for needed disk consolidation.
+  Checks all VMs in Vsphere location "Development" whose name begins with 
+  isolated- for needed disk consolidation.
   .EXAMPLE
   Get-ConsolidationNeeded | Start-Consolidation
 
-  Check all VMs registered to the currently connected vCenter server for needed disk consolidation and begins the proccess of consolidating disks if needed.
+  Check all VMs registered to the currently connected vCenter server for needed 
+  disk consolidation and begins the proccess of consolidating disks if needed.
   .PARAMETER Name
   Specifies the name(s) of the virtual machine(s) you want to retrieve.
   .PARAMETER Location
-  Specifies the name(s) of the vSphere container object(s) you want to search for virtual machines. Supported container object types are: ResourcePool, VApp, VMHost, Folder, Cluster, Datacenter.
+  Specifies the name(s) of the vSphere container object(s) you want to search 
+  for virtual machines. Supported container object types are: ResourcePool, 
+  VApp, VMHost, Folder, Cluster, Datacenter.
   .PARAMETER logname
   The name of a file to write failed computer names to. Defaults to errors.txt.
   .LINK

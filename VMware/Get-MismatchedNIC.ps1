@@ -1,14 +1,21 @@
 ﻿function Get-MismatchedNIC {
   <#
   .SYNOPSIS
-  Determines if there is a mismatch between "Connected" and "Connect at power on" properties on VM NICs.
+  Determines if there is a mismatch between "Connected" and "Connect at power 
+  on" properties on VM NICs.
   .DESCRIPTION
-  This cmdlet loops through a supplied list of VMs, all VMs in provided clusters, or all VMs in the vCenter. For each VM, every network interface is checked to determine if it is currently connected and if it is set to connect when the VM starts. This is important as a NIC that is currently connected could unexpectidly become disconnected after a reboot of the VM.
+  This cmdlet loops through a supplied list of VMs, all VMs in provided 
+  clusters, or all VMs in the vCenter. For each VM, every network interface is 
+  checked to determine if it is currently connected and if it is set to connect 
+  when the VM starts. This is important as a NIC that is currently connected 
+  could unexpectidly become disconnected after a reboot of the VM.
 
   true  = a mismatch has been detected
   false = the configuration of both connection states is identical
 
-  If there is a mismatch detected but the VM is currently powered off (and the NIC is set to connect at power on), this is counted as a flase positive and false is returned.
+  If there is a mismatch detected but the VM is currently powered off (and the 
+  NIC is set to connect at power on), this is counted as a flase positive and 
+  false is returned.
   .EXAMPLE
   Get-MismatchedNIC -Cluster Production
 
@@ -20,17 +27,23 @@
   .EXAMPLE
   Get-MismatchedNIC -All
 
-  Tests for NIC status mismatches for all VMs registered to the currently connected vCenter Server.
+  Tests for NIC status mismatches for all VMs registered to the currently 
+  connected vCenter Server.
   .EXAMPLE
   Get-MismatchedNIC Production | Group "Mismatch"
 
-  Groups the results of all tested VMs by their Mismatch status (true or false), returning arrays of VMs.
+  Groups the results of all tested VMs by their Mismatch status (true or 
+  false), returning arrays of VMs.
   .EXAMPLE
   Get-MismatchedNIC -Guest ad1 | Select *
 
-  See more details than what is returned by default, for example the actual values for the component status that determine a mismatch and the VM's cluster.
+  See more details than what is returned by default, for example the actual 
+  values for the component status that determine a mismatch and the VM's 
+  cluster.
   .PARAMETER cluster
-  The cluster to gather VMs from. You can specify one, or an array of clusters. If no parameters are set it is assumed you are supplying the name, or names, of a cluster.
+  The cluster to gather VMs from. You can specify one, or an array of clusters. 
+  If no parameters are set it is assumed you are supplying the name, or names, 
+  of a cluster.
 
   By default output will be ordered by cluster then by VM name.
   .PARAMETER guest
@@ -38,7 +51,8 @@
 
   By default output will be ordered by VM name.
   .PARAMETER all
-  This switch will gather all VMs registered to the currently connected vCenter Server, regardless of name or the cluster it resides within.
+  This switch will gather all VMs registered to the currently connected vCenter 
+  Server, regardless of name or the cluster it resides within.
   .PARAMETER logname
   The name of a file to write failure events to. Defaults to errors.txt.
   #>

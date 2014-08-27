@@ -1,4 +1,5 @@
-# Adding this PsSnapin here, instead of in the begin block, as I am using the VirtualMachine type for a parameter
+# Adding this PsSnapin here, instead of in the begin block, as I am using the 
+# VirtualMachine type for a parameter
 if ( (Get-PSSnapin -Name VMware.VimAutomation.Core -ErrorAction SilentlyContinue) -eq $null ) {
   Add-PsSnapin -Name VMware.VimAutomation.Core
 }
@@ -8,17 +9,23 @@ function Start-Consolidation {
   .SYNOPSIS
   Consolidates VM disks
   .DESCRIPTION
-  Calls a VM object's "ConsolidateVMDisks" method. Takes VirtualMachine objects as input (Get-VM or similar command), best used in conjunction with Get-ConsolidationNeeded which will only return objects that require disk consolidation.
+  Calls a VM object's "ConsolidateVMDisks" method. Takes VirtualMachine objects 
+  as input (Get-VM or similar command), best used in conjunction with 
+  Get-ConsolidationNeeded which will only return objects that require disk 
+  consolidation.
 
-  Will connect to 'vcenter.hawk-i.govt.nz' if you have not connected to a vCenter server with the Connect-VIServer cmdlet.
+  Will connect to 'vcenter.hawk-i.govt.nz' if you have not connected to a 
+  vCenter server with the Connect-VIServer cmdlet.
   .EXAMPLE
   Get-VM | Start-Consolidation
 
-  Attempts to consolidate every VM registered to the currently connected vCenter server regardless of whether they need consolidation or not.
+  Attempts to consolidate every VM registered to the currently connected 
+  vCenter server regardless of whether they need consolidation or not.
   .EXAMPLE
   Get-ConsolidationNeeded | Start-Consolidation
 
-  Determines which VMs, out of all VMs registered to the currently connected vCenter server, needs consolidation and consolidates them.
+  Determines which VMs, out of all VMs registered to the currently connected 
+  vCenter server, needs consolidation and consolidates them.
   .PARAMETER VM
   Specifies the Virtual Machine you would like to conolsidate.
   .PARAMETER logname
