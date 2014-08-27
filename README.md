@@ -24,5 +24,5 @@ loaded, and adds them if not. They will also connect to a VIServer
 connection.
 
 To set the server you want to connect to when using PowerCLI, replace 
-**\_\_\_VCENTER\_SERVER\_\_\_*** with the fully qualified domain name of your 
+**\_\_\_VCENTER\_SERVER\_\_\_** with the fully qualified domain name of your 
 vSphere/vCenter server.
