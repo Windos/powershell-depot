@@ -1,4 +1,4 @@
-        
+
 		write-verbose 'Checking for VMware PsSnapin'
         if ((Get-PSSnapin -Name VMware.VimAutomation.Core -ErrorAction SilentlyContinue) -eq $null)
 		{
