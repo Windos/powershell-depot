@@ -15,7 +15,7 @@ function Invoke-Speech
 
     process
 	{
-        $voice.Speak($say) | out-null;    
+        $voice.Speak($say) | out-null;
     }
 }
 
@@ -33,9 +33,25 @@ function prompt
     }
 
     $nextCommand = $lastId + 1
-    $currentDirectory = get-location
 
-    "[$nextCommand] PS $currentDirectory> "
+
+    $jobs = @(Get-Job -State Running)
+	$runningjobs = "`n"
+
+    if($jobs.Count -gt 0)
+	{
+	    foreach ($job in $jobs)
+		{
+		    $ID = $job.Id
+			$name = $job.Name
+		    $runningjobs += "[$ID : $Name] "
+		}
+		$runningjobs += "`n"
+	}
+
+	$currentDirectory = get-location
+
+	"$runningjobs[$nextCommand] PS $currentDirectory> "
 }
 
 cd \
