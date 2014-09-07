@@ -1,29 +1,29 @@
-﻿function Get-WINFileExists {
+﻿function Get-WDFileExists {
 
 <#
     .SYNOPSIS
     Determines if a file or directory path exists on a specified group of computers.
 
 	.DESCRIPTION
-    The Get-WINFileExists cmdlet determines whether a file or directory path exists on a group of computers. As it can test multiple computers and paths it returns the computer name, path and $true or $false depending on whether or not the path exists. If a specified path include 'Program Files', the cmdlet will automatically check 'Program Files (x86)' if not manually specified.
+    The Get-WDFileExists cmdlet determines whether a file or directory path exists on a group of computers. As it can test multiple computers and paths it returns the computer name, path and $true or $false depending on whether or not the path exists. If a specified path include 'Program Files', the cmdlet will automatically check 'Program Files (x86)' if not manually specified.
 
 	.NOTES
     The original idea and intial script implementation for this cmdlet is attributed to Kevin Dresser.
 
 	.EXAMPLE
-    Get-WINFileExists -path 'c$\Program Files\PC Monitor\PCMonitorManager.exe' -OperatingSystem ad1,ad2,ex1,file1
+    Get-WDFileExists -path 'c$\Program Files\PC Monitor\PCMonitorManager.exe' -OperatingSystem ad1,ad2,ex1,file1
 
     Checks for the executable 'PCMonitorManager.exe' within the specified directory (and it's (x86) varient) on all four listed computers.
 
 	.EXAMPLE
-    Get-WINFileExists -path 'c$\Program Files (x86)\Mozilla Firefox\firefox.exe' -OperatingSystem *server*
+    Get-WDFileExists -path 'c$\Program Files (x86)\Mozilla Firefox\firefox.exe' -OperatingSystem *server*
 
     Checks to see if the firefox executable exists on any computer in Active Directory with 'server' contained in it's operationg system (for example 'Windows Server 2008 R2 Standard')
 
     Note: as the (x86) directory was specified by itself when calling the cmdlet, the non-x86 directory will not be checked.
 
 	.EXAMPLE
-    Get-WINFileExists -path 'c$\doom.exe' -SearchBase 'OU=Workstations,OU=Computers,DC=example,DC=local'
+    Get-WDFileExists -path 'c$\doom.exe' -SearchBase 'OU=Workstations,OU=Computers,DC=example,DC=local'
 
     Checks to see if DOOM has been installed to the root of the c drive on any computer in the exmaple.local domain's Worstation OU.
 

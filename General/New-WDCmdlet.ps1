@@ -1,4 +1,4 @@
-﻿function New-WINCmdlet {
+﻿function New-WDCmdlet {
 
 <#
     .SYNOPSIS
@@ -16,7 +16,7 @@
 	"Verb-Noun.ps1"
 
 	.NOTES
-	The 'WIN' prefix is a contraction of my GitHub username, Windos, and will
+	The 'WD' prefix is a contraction of my GitHub username, Windos, and will
 	be used for all of my general/personal cmdlets.
 
 	As this is intended as a helper function for myself, the paths used are
@@ -30,19 +30,19 @@
 	vmwareTemplate.ps1
 
 	.EXAMPLE
-    New-WINCmdlet
+    New-WDCmdlet
 
 	Creates a new cmdlet based entirly on a blank template, named
 	"Get-Something"
 
 	.EXAMPLE
-    New-WINCmdlet Ping Universe -Synopsis 'Pings everything in the Universe'
+    New-WDCmdlet Ping Universe -Synopsis 'Pings everything in the Universe'
 
 	Creates a new cmdlet called "Ping-Universe" with a custom synopsis.
 	Everything else is dictated by the tempalte.
 
 	.EXAMPLE
-    New-WINCmdlet Remove vCenter -VMware
+    New-WDCmdlet Remove vCenter -VMware
 
 	Creates a new cmdlet called "Remove-vCenter", which contains extra commands
     for VMware based cmdlets.
