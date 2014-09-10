@@ -17,9 +17,12 @@
 	.EXAMPLE
     Give another example of how to use it
 
-	.PARAMETER computername
-    The computer name to query. Just one.
-	
+	.PARAMETER Group
+    The Active Directory group or groups to gather users from. Can include wild cards.
+
+	.PARAMETER Except
+    The Active Directory group to exclude from searches. Just one. Can include wild cards.
+
 	.LINK
 	https://github.com/Windos/powershell-depot
 #>
@@ -40,7 +43,7 @@
                    Mandatory=$False,
                    ValueFromPipeline=$False,
                    ValueFromPipelineByPropertyName=$True,
-                   HelpMessage='Which group name would you like to target?')]
+                   HelpMessage='Which group name would you like to exclude?')]
         [ValidateNotNullOrEmpty()]
         [string]$Except
     )
@@ -52,16 +55,15 @@
 
     process
 	{
-        users = @()
+        $users = @()
 
         foreach ($testgroup in $group)
         {
-            $filter = "Name -like ""$testgroup"""
+            $filter = "Name -like '$testgroup'"
             if ($Except -ne $null -and $Except -ne '')
             {
-                $filter += " -and Name -notlike ""$Except"""
+                $filter += " -and Name -notlike '$Except'"
             }
-
             $ADGroup = Get-ADGroup -Filter $filter
             $users += $ADGroups | Get-ADGroupMember | Get-ADUser -Properties Mail
         }
