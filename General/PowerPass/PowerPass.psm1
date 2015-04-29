@@ -1,4 +1,85 @@
-﻿$testcred =@()
+﻿$CredLocker = @()
+
+class PPCredential {
+    [string] $Name;
+    [uint32] $Id;
+    [pscredential] $Credential;
+    [string] $Folder;
+    [string] $Notes;
+    [securestring] $SecureNotes;
+    [bool] $Favorite;
+    [datetime] $Retrieved;
+    [bool] $LatestUsed;
+
+    PPCredential([string] $Name, [pscredential] $Credential, [string] $Folder, [string] $Notes, [securestring] $SecureNotes, [bool] $Favorite) {
+        $this.Credential = $Credential
+        $this.Name = $Name
+        $this.Folder = $Folder
+        $this.Notes = $Notes
+        $this.SecureNotes = $SecureNotes
+        $this.Favorite = $Favorite
+        $this.Retrieved = Get-Date
+    }
+    
+    PPCredential([string] $Name, [pscredential] $Credential) {
+        $this.Credential = $Credential
+        $this.Name = $Name
+        $this.Retrieved = Get-Date
+    }
+}
+
+function New-PPCredential {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding(DefaultParameterSetName='String')]
+    [OutputType([PPCredential])]
+    Param (
+        [string] $Name,
+        [pscredential] $Credential,
+        [string] $Folder = 'Default',
+        [string] $Note = '',
+        
+        [Parameter(ParameterSetName='SecureString')]
+        [securestring] $SecureNote,
+        
+        [Parameter(ParameterSetName='String')]
+        [string] $SecureNoteAsString = 'This is a secure string',
+        
+        [switch] $Favorite,
+        [switch] $Add,
+        [switch] $Save
+    )
+
+    if ($Credential -eq $null) {
+        $Credential = Get-Credential
+    }
+
+    if ($Name -eq $null -or $Name -eq '') {
+        $Name = $Credential.UserName
+    }
+
+    if ($SecureNoteAsString -ne $null -or $SecureNoteAsString -eq '') {
+        $SecureNote = $SecureNoteAsString | ConvertTo-SecureString -AsPlainText -Force
+    }
+
+    $PPCred = [PPCredential]::new($Name, $Credential, $Folder, $Note, $SecureNote, $Favorite)
+
+    if ($Add -and $Save) {
+        Add-PPCredential -Credential $PPCred -Save
+    } elseif ($Add) {
+        Add-PPCredential -Credential $PPCred
+    }
+
+    $PPCred
+}
 
 function Add-PPCredential {
 <#
@@ -12,12 +93,18 @@ function Add-PPCredential {
     Another example of how to use this cmdlet
 #>
     [CmdletBinding()]
-    Param ()
+    Param (
+        [PPCredential] $Credential,
+        [switch]$Save
+    )
 
-    $cred = $null
-    $cred = Get-Credential
+    if ($Credential -eq $null) {
+        $Credential = New-PPCredential
+    }
 
-    $global:testcred += ($cred)
+    $global:CredLocker += ($Credential)
+
+    if ($Save) { Save-PPCredential }
 }
 
 function Save-PPCredential {
@@ -35,10 +122,10 @@ function Save-PPCredential {
     Param ()
 
     $SavePath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
-    Export-Clixml -InputObject $testcred -Path $SavePath
+    Export-Clixml -InputObject $CredLocker -Path $SavePath
 }
 
-function Load-PPCredential {
+function Open-PPCredential {
 <#
     .Synopsis
     Short description
@@ -53,8 +140,8 @@ function Load-PPCredential {
     [CmdletBinding()]
     Param ()
 
-    $LoadPath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
-    $global:testcred = Import-Clixml -Path $LoadPath
+    $OpenPath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
+    $global:CredLocker = Import-Clixml -Path $OpenPath
 }
 
 function Show-PPCredential {
@@ -72,7 +159,7 @@ function Show-PPCredential {
     [CmdletBinding()]
     Param ()
 
-    $testcred
+    $CredLocker
 }
 
 function Search-PPCredential {
@@ -87,29 +174,64 @@ function Search-PPCredential {
     Another example of how to use this cmdlet
 #>
 
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Default')]
     Param (
         [Parameter(Mandatory=$True,
                    ValueFromPipeline=$True,
                    ValueFromPipelineByPropertyName=$True,
                    Position=0)]
-        [Alias('User')]
+        [alias('User')]
         [ValidateNotNullorEmpty()]
-        [string[]]$UserName
+        [string[]]$UserName,
 
-        # Case Sensitivety
+        [Parameter(ParameterSetName='Default')]
+        [switch]$SearchInCredential,
         
-        # exact/wildcards?
+        [Parameter(ParameterSetName='Default')]
+        [alias('Case')]
+        [switch]$CaseSensitive,
 
-        # match/regex
+        [Parameter(ParameterSetName='Default')]
+        [alias('Exact')]
+        [switch]$WholeWord,
+
+        [Parameter(ParameterSetName='Regex')]
+        [switch]$Regex
     )
 
     begin {}
     process {
         foreach ($searchCase in $UserName) {
-            foreach ($cred in $testCred) {
-                if ($cred.UserName.ToLower() -match $searchCase.ToLower()) {
-                    $cred
+            foreach ($cred in $CredLocker) {
+                $search = $cred.Name
+                if ($SearchInCredential) { $search = $cred.Credential.UserName }
+
+                if ($Regex) {
+                    if ($search -match $searchCase) {
+                        $cred
+                    }
+                } else {
+                    if ($WholeWord) {    
+                        if ($CaseSensitive) {
+                            if ($search -ceq $searchCase) {
+                                $cred
+                            }
+                        } else {
+                            if ($search -eq $searchCase) {
+                                $cred
+                            }
+                        }
+                    } else {
+                        if ($CaseSensitive) {
+                            if ($search -clike "*$searchCase*") {
+                                $cred
+                            }
+                        } else {
+                            if ($search -like "*$searchCase*") {
+                                $cred
+                            }
+                        }
+                    }
                 }
             }
         }
