@@ -1,5 +1,6 @@
 ﻿<#
  # Project:     PowerPass, a Password Manager for PowerShell
+ # Version:     0.2
  # Author:      Joshua King
  # Description: Store and manage credentials using PowerShell
  # 
@@ -36,6 +37,7 @@
 $CredLocker = @()
 
 class PPCredential {
+    #region class properties
     [string] $Name;
     [uint32] $Id;
     [pscredential] $Credential;
@@ -45,7 +47,9 @@ class PPCredential {
     [bool] $Favorite;
     [datetime] $Retrieved;
     [bool] $LatestUsed;
+    #endregion
 
+    #region class constructors
     PPCredential([string] $Name, [pscredential] $Credential, [string] $Folder, [string] $Notes, [securestring] $SecureNotes, [bool] $Favorite) {
         $this.Credential = $Credential
         $this.Name = $Name
@@ -61,55 +65,99 @@ class PPCredential {
         $this.Name = $Name
         $this.Retrieved = Get-Date
     }
+    #endregion
+
+    #region class methods
+
+    #endregion
 }
 
 function New-PPCredential {
 <#
     .Synopsis
-    Short description
+    Creates a new PowerPass credential.
     .DESCRIPTION
-    Long description
+    The New-PPCredential cmdlet creates a new PowerPass credential object. This cmdlet can add the object to the in memory credential locker and also save the credential locker to disk.
+
+    You can provide an already created PSCredential object to this cmdlet, or create a new one when this cmdlet is run.
     .EXAMPLE
-    Example of how to use this cmdlet
+    New-PPCredential
+
+    This command prompts you to enter a username and password in a Windows Security prompts, then it creates a PowerPass credential using the supplied username as the object's name.
     .EXAMPLE
-    Another example of how to use this cmdlet
+    $cred = New-Credential
+    PS C:\>New-PPCredential -Credential $cred
+
+    This example creates a new PowerPass credential from a PSCredential stored in a variable. It set's the PowerPass credential's name to the username.
+    .EXAMPLE
+    New-Credential -Name 'Admin credentials for WebServer' -Folder 'Web' -Favorite $true -Note 'Default port changed to 8080'
+
+    This command prompts you to enter a username and password in a Windows Security prompts, then it creates a PowerPass credential using the supplied properties.
+    .OUTPUTS
+    PPCredential
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General/PowerPass
+    .LINK
+    Add-PPCredential
+    .LINK
+    Save-PPCredential
 #>
     [CmdletBinding(DefaultParameterSetName='String')]
     [OutputType([PPCredential])]
     Param (
-        [string] $Name,
+        # When present, the Add switch will pass the new PowerPass credential to the Add-PPCredential cmdlet.
+        [switch] $Add,
+
+        # Specifies the PSCredential object to store inside the PowerPass credential object. If not supplied, you will be prompted to create one.
         [pscredential] $Credential,
+        
+        # Specifies whether a PPCredential should be considered a favorite, useful for quickly retrieving commonly used credentials.
+        [switch] $Favorite,
+        
+        # Specifies the 'folder' into which to store the PowerPass Credential. If no folder is specified a default location will be used.
         [string] $Folder = 'Default',
+        
+        # Specifies a friendly name by which the PowerPass credential can be refered. If not supplied, the username from the credential parameter will be used.
+        [string] $Name,
+        
+        # Specifies notes to be stored alongside the PowerPass credential. When saved to disk, this will be stored in plain text.        
         [string] $Note = '',
         
+        # When present, the Save switch will run the Save-PPCredential cmdlet. This will only work if supplied along with the Add switch. 
+        [switch] $Save,
+        
+        # Specifies notes, in the form of a secure string, to be stored alongside the PowerPass credential. When saved to disk, this will be stored as an encrypted string. 
         [Parameter(ParameterSetName='SecureString')]
         [securestring] $SecureNote,
         
+        # # Specifies notes, in the form of a regular string, to be stored alongside the PowerPass credential. This will be converted to a secure string when added to a PowerPass credential. When saved to disk, this will be stored as an encrypted string. 
         [Parameter(ParameterSetName='String')]
-        [string] $SecureNoteAsString = 'This is a secure string',
-        
-        [switch] $Favorite,
-        [switch] $Add,
-        [switch] $Save
+        [string] $SecureNoteAsString = 'This is a secure string'
     )
 
     if ($Credential -eq $null) {
+        Write-Verbose -Message 'A preexisting PSCredential object was not supplied. Prompting user to create one.'
         $Credential = Get-Credential
     }
 
     if ($Name -eq $null -or $Name -eq '') {
+        Write-Verbose -Message 'No name was supplied. The PSCredential UserName will be used.'
         $Name = $Credential.UserName
     }
 
     if ($SecureNoteAsString -ne $null -or $SecureNoteAsString -eq '') {
+        Write-Verbose -Message 'Secure note supplied as a string, converting to securestring.'
         $SecureNote = $SecureNoteAsString | ConvertTo-SecureString -AsPlainText -Force
     }
 
+    Write-Verbose -Message 'Creating PPCredential object.'
     $PPCred = [PPCredential]::new($Name, $Credential, $Folder, $Note, $SecureNote, $Favorite)
 
     if ($Add -and $Save) {
+        Write-Verbose -Message 'Adding PPCredential object to the CredLocker and saving the CredLocker to disk.'
         Add-PPCredential -Credential $PPCred -Save
     } elseif ($Add) {
+        Write-Verbose -Message 'Adding PPCredential object to the CredLocker.'
         Add-PPCredential -Credential $PPCred
     }
 
@@ -119,27 +167,59 @@ function New-PPCredential {
 function Add-PPCredential {
 <#
     .Synopsis
-    Short description
+    Adds one or more PowerPass credentials to the PowerPass CredLocker.
     .DESCRIPTION
-    Long description
+    The Add-PPCredential cmdlet adds one or more PowerPass credentials to the PowerPass CredLocker. Optionally, this cmdlet can also save the CredLocker to disk once all additions have completed.
+
+    You can supply a PowerPass credential object as a parameter of the cmdlet, pipe the object to cmdlet, or call the Add-PPCredential cmdlet without an existing PowerPass credential to generate a new one.
     .EXAMPLE
-    Example of how to use this cmdlet
+    Add-PPCredential
+
+    This command will prompt you for a username and password, create a new PowerPass credential and add it to the CredLocker.
     .EXAMPLE
-    Another example of how to use this cmdlet
+    $cred = New-PPCredential
+    Add-PPCredential -Credential $cred
+
+    This example stores a PowerPass credential in the variable, $cred, then supplying it to the Add-PPCredential cmdlet to be added to the CredLocker.
+    .EXAMPLE
+    New-PPCredential | Add-PPCredential -Save
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General/PowerPass
+    .LINK
+    New-PPCredential
+    .LINK
+    Save-PPCredential
 #>
     [CmdletBinding()]
     Param (
-        [PPCredential] $Credential,
+        # Specifies one or more PowerPass credential.
+        [Parameter(ValueFromPipeline=$True,
+                   ValueFromPipelineByPropertyName=$True,
+                   Position=0)]
+        [PPCredential[]] $Credential,
+
+        # When present, the Save switch will run the Save-PPCredential cmdlet.
         [switch]$Save
     )
 
-    if ($Credential -eq $null) {
-        $Credential = New-PPCredential
+    begin{
+        if ($Credential -eq $null) {
+            Write-Verbose -Message 'A preexisting PowerPass credential object was not supplied. Prompting user to create one.'
+            $Credential = New-PPCredential
+        }
     }
-
-    $script:CredLocker += ($Credential)
-
-    if ($Save) { Save-PPCredential }
+    process{
+        foreach ($cred in $Credential) {
+            Write-Verbose -Message "Processing $($cred.Name)"
+            $script:CredLocker += ($cred)
+        }
+    }
+    end {
+        if ($Save) {
+            Write-Verbose -Message 'Saving CredLocker to disk.'
+            Save-PPCredential
+        }
+    }
 }
 
 function Save-PPCredential {
