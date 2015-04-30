@@ -102,7 +102,7 @@ function Add-PPCredential {
         $Credential = New-PPCredential
     }
 
-    $global:CredLocker += ($Credential)
+    $script:CredLocker += ($Credential)
 
     if ($Save) { Save-PPCredential }
 }
@@ -122,7 +122,7 @@ function Save-PPCredential {
     Param ()
 
     $SavePath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
-    Export-Clixml -InputObject $CredLocker -Path $SavePath
+    Export-Clixml -InputObject $Script:CredLocker -Path $SavePath
 }
 
 function Open-PPCredential {
@@ -159,7 +159,7 @@ function Show-PPCredential {
     [CmdletBinding()]
     Param ()
 
-    $CredLocker
+    $Script:CredLocker
 }
 
 function Search-PPCredential {
@@ -202,7 +202,7 @@ function Search-PPCredential {
     begin {}
     process {
         foreach ($searchCase in $UserName) {
-            foreach ($cred in $CredLocker) {
+            foreach ($cred in $Script:CredLocker) {
                 $search = $cred.Name
                 if ($SearchInCredential) { $search = $cred.Credential.UserName }
 
