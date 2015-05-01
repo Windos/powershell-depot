@@ -50,9 +50,10 @@ class PPCredential {
     #endregion
 
     #region class constructors
-    PPCredential([string] $Name, [pscredential] $Credential, [string] $Folder, [string] $Notes, [securestring] $SecureNotes, [bool] $Favorite) {
+    PPCredential([string] $Name, [uint32] $Id, [pscredential] $Credential, [string] $Folder, [string] $Notes, [securestring] $SecureNotes, [bool] $Favorite) {
         $this.Credential = $Credential
         $this.Name = $Name
+        $this.Id = $Id
         $this.Folder = $Folder
         $this.Notes = $Notes
         $this.SecureNotes = $SecureNotes
@@ -71,6 +72,46 @@ class PPCredential {
 
     #endregion
 }
+
+#region Helper Functions
+function New-HighestPPCredId {
+    $SortedLocker = $Global:CredLocker | Sort-Object -Property 'Id' -Descending
+    $NewId = $SortedLocker[0].Id + 1
+    $NewId
+}
+
+function New-LowestAvailPPCredId {
+    $SortedLocker = $Global:CredLocker | Sort-Object -Property 'Id'
+    $NewId = 1
+    foreach ($Id in $SortedLocker) {
+       $taken = $false
+       if ($Id.Id -eq $NewId) {
+           $taken = $true
+       }
+       if (!$taken) {
+           break
+       } else {
+           $NewId++
+       }
+    }
+    
+    $NewId
+}
+
+function Get-CredById {
+    Param ([uint32] $Id)
+
+    ## MOVE TO EFFICIENT SEARCH ALGORITHM
+
+    $SortedLocker = $Global:CredLocker | Sort-Object -Property 'Id'
+    foreach ($Cred in $SortedLocker) {
+        if ($Cred.Id -eq $Id) {
+            $Cred
+            break
+        }
+    }
+}
+#endregion
 
 function New-PPCredential {
 <#
@@ -116,6 +157,9 @@ function New-PPCredential {
         
         # Specifies the 'folder' into which to store the PowerPass Credential. If no folder is specified a default location will be used.
         [string] $Folder = 'Default',
+
+        # Specifies that the automatically generated Id should be the lowest available in the Credential locker. If not specified a new Id higher than all existing Ids will be used.
+        [switch] $LowestId,
         
         # Specifies a friendly name by which the PowerPass credential can be refered. If not supplied, the username from the credential parameter will be used.
         [string] $Name,
@@ -150,8 +194,14 @@ function New-PPCredential {
         $SecureNote = $SecureNoteAsString | ConvertTo-SecureString -AsPlainText -Force
     }
 
+    if ($LowestId) {
+        $Id = New-LowestAvailPPCredId
+    } else {
+        $Id = New-HighestPPCredId
+    }
+
     Write-Verbose -Message 'Creating PPCredential object.'
-    $PPCred = [PPCredential]::new($Name, $Credential, $Folder, $Note, $SecureNote, $Favorite)
+    $PPCred = [PPCredential]::new($Name, $Id, $Credential, $Folder, $Note, $SecureNote, $Favorite)
 
     if ($Add -and $Save) {
         Write-Verbose -Message 'Adding PPCredential object to the CredLocker and saving the CredLocker to disk.'
@@ -193,32 +243,24 @@ function Add-PPCredential {
     [CmdletBinding()]
     Param (
         # Specifies one or more PowerPass credential.
-        [Parameter(ValueFromPipeline=$True,
-                   ValueFromPipelineByPropertyName=$True,
-                   Position=0)]
-        [PPCredential[]] $Credential,
+        [Parameter(Position=0)]
+        [PPCredential] $Credential,
 
         # When present, the Save switch will run the Save-PPCredential cmdlet.
         [switch]$Save
     )
 
-    begin{
-        if ($Credential -eq $null) {
-            Write-Verbose -Message 'A preexisting PowerPass credential object was not supplied. Prompting user to create one.'
-            $Credential = New-PPCredential
-        }
+    if ($Credential -eq $null) {
+        Write-Verbose -Message 'A preexisting PowerPass credential object was not supplied. Prompting user to create one.'
+        $Credential = New-PPCredential
     }
-    process{
-        foreach ($cred in $Credential) {
-            Write-Verbose -Message "Processing $($cred.Name)"
-            $script:CredLocker += ($cred)
-        }
-    }
-    end {
-        if ($Save) {
-            Write-Verbose -Message 'Saving CredLocker to disk.'
-            Save-PPCredential
-        }
+
+    Write-Verbose -Message "Processing $($Credential.Name)"
+    $Global:CredLocker += ($Credential)
+
+    if ($Save) {
+        Write-Verbose -Message 'Saving CredLocker to disk.'
+        Save-PPCredential
     }
 }
 
@@ -237,7 +279,7 @@ function Save-PPCredential {
     Param ()
 
     $SavePath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
-    Export-Clixml -InputObject $Script:CredLocker -Path $SavePath
+    Export-Clixml -InputObject $Global:CredLocker -Path $SavePath
 }
 
 function Open-PPCredential {
@@ -274,7 +316,7 @@ function Show-PPCredential {
     [CmdletBinding()]
     Param ()
 
-    $Script:CredLocker
+    $Global:CredLocker
 }
 
 function Search-PPCredential {
@@ -291,7 +333,13 @@ function Search-PPCredential {
 
     [CmdletBinding(DefaultParameterSetName='Default')]
     Param (
-        [Parameter(Mandatory=$True,
+        [Parameter(ParameterSetName='Default',
+                   Mandatory=$True,
+                   ValueFromPipeline=$True,
+                   ValueFromPipelineByPropertyName=$True,
+                   Position=0)]
+        [Parameter(ParameterSetName='Regex',
+                   Mandatory=$True,
                    ValueFromPipeline=$True,
                    ValueFromPipelineByPropertyName=$True,
                    Position=0)]
@@ -311,45 +359,52 @@ function Search-PPCredential {
         [switch]$WholeWord,
 
         [Parameter(ParameterSetName='Regex')]
-        [switch]$Regex
+        [switch]$Regex,
+
+        [Parameter(ParameterSetName='Id')]
+        [uint32]$Id
     )
 
     begin {}
     process {
-        foreach ($searchCase in $UserName) {
-            foreach ($cred in $Script:CredLocker) {
-                $search = $cred.Name
-                if ($SearchInCredential) { $search = $cred.Credential.UserName }
+        if ($PSCmdlet.ParameterSetName -eq 'Id') {
+            Get-CredById -Id $Id
+        } else {
+            foreach ($searchCase in $UserName) {
+                foreach ($cred in $Global:CredLocker) {
+                    $search = $cred.Name
+                    if ($SearchInCredential) { $search = $cred.Credential.UserName }
 
-                if ($Regex) {
-                    if ($search -match $searchCase) {
-                        $cred
-                    }
-                } else {
-                    if ($WholeWord) {    
-                        if ($CaseSensitive) {
-                            if ($search -ceq $searchCase) {
-                                $cred
-                            }
-                        } else {
-                            if ($search -eq $searchCase) {
-                                $cred
-                            }
+                    if ($Regex) {
+                        if ($search -match $searchCase) {
+                            $cred
                         }
                     } else {
-                        if ($CaseSensitive) {
-                            if ($search -clike "*$searchCase*") {
-                                $cred
+                        if ($WholeWord) {    
+                            if ($CaseSensitive) {
+                                if ($search -ceq $searchCase) {
+                                    $cred
+                                }
+                            } else {
+                                if ($search -eq $searchCase) {
+                                    $cred
+                                }
                             }
                         } else {
-                            if ($search -like "*$searchCase*") {
-                                $cred
+                            if ($CaseSensitive) {
+                                if ($search -clike "*$searchCase*") {
+                                    $cred
+                                }
+                            } else {
+                                if ($search -like "*$searchCase*") {
+                                    $cred
+                                }
                             }
                         }
                     }
-                }
-            }
-        }
+                } # foreach ($cred in $Global:CredLocker)
+            } # foreach ($searchCase in $UserName)
+        } # else (not an Id search)
     }
     end {} 
 }
