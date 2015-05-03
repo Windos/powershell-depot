@@ -194,10 +194,14 @@ function New-PPCredential {
         $SecureNote = $SecureNoteAsString | ConvertTo-SecureString -AsPlainText -Force
     }
 
-    if ($LowestId) {
-        $Id = New-LowestAvailPPCredId
+    if ($global:CredLocker.Count -gt 0) {
+        if ($LowestId) {
+            $Id = New-LowestAvailPPCredId
+        } else {
+            $Id = New-HighestPPCredId
+        }
     } else {
-        $Id = New-HighestPPCredId
+        $Id = 1
     }
 
     Write-Verbose -Message 'Creating PPCredential object.'
@@ -301,24 +305,6 @@ function Open-PPCredential {
     $global:CredLocker = Import-Clixml -Path $OpenPath
 }
 
-function Show-PPCredential {
-<#
-    .Synopsis
-    Short description
-    .DESCRIPTION
-    Long description
-    .EXAMPLE
-    Example of how to use this cmdlet
-    .EXAMPLE
-    Another example of how to use this cmdlet
-#>
-
-    [CmdletBinding()]
-    Param ()
-
-    $Global:CredLocker
-}
-
 function Search-PPCredential {
 <#
     .Synopsis
@@ -334,7 +320,7 @@ function Search-PPCredential {
     [CmdletBinding(DefaultParameterSetName='Default')]
     Param (
         [Parameter(ParameterSetName='Default',
-                   Mandatory=$True,
+                   Mandatory=$False,
                    ValueFromPipeline=$True,
                    ValueFromPipelineByPropertyName=$True,
                    Position=0)]
@@ -358,17 +344,22 @@ function Search-PPCredential {
         [alias('Exact')]
         [switch]$WholeWord,
 
-        [Parameter(ParameterSetName='Regex')]
+        [Parameter(ParameterSetName='Regex',
+                   Mandatory=$True)]
         [switch]$Regex,
 
-        [Parameter(ParameterSetName='Id')]
+        [Parameter(ParameterSetName='Id',
+                   Mandatory=$True)]
         [uint32]$Id
     )
 
     begin {}
     process {
+        if ($PSCmdlet.ParameterSetName -eq 'Default' -and $UserName -eq $null) {
+            $Global:CredLocker
+        }
         if ($PSCmdlet.ParameterSetName -eq 'Id') {
-            Get-CredById -Id $Id
+            $Global:CredLocker | Where-Object -FilterScript { $_.Id -eq $Id }
         } else {
             foreach ($searchCase in $UserName) {
                 foreach ($cred in $Global:CredLocker) {
