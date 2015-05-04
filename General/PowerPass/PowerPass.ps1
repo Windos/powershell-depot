@@ -1,6 +1,6 @@
 ﻿<#
  # Project:     PowerPass, a Password Manager for PowerShell
- # Version:     0.2
+ # Version:     0.0.3
  # Author:      Joshua King
  # Description: Store and manage credentials using PowerShell
  # 
@@ -29,9 +29,17 @@
  #	            FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
  #	            OTHER DEALINGS IN THE SOFTWARE.
  #
- # Change Log:  29/04/2015 - 0.2 - Expanded search cmdlet and created custom
- #                                 class for PPCredentials.
- #              28/04/2015 - 0.1 - Created project.
+ # Change Log:  4/05/2015  - 0.0.3 - Removed Show-PPCredential cmdlet, rolled 
+ #                                   functionality into Search-PPCredential (pass
+ #                                   no parameters to get all PPCredentials.
+ #                                   Using Where-Object instead of iterating 
+ #                                   through all PPCredentials when searching by
+ #                                   Id. In a test using 20 credentials, there 
+ #                                   was an improvement from 15 ms to 1 ms.
+ #                                   More help added.
+ #              29/04/2015 - 0.0.2 - Expanded search cmdlet and created custom
+ #                                   class for PPCredentials.
+ #              28/04/2015 - 0.0.1 - Created project.
  #>
 
 $CredLocker = @()
@@ -96,20 +104,6 @@ function New-LowestAvailPPCredId {
     }
     
     $NewId
-}
-
-function Get-CredById {
-    Param ([uint32] $Id)
-
-    ## MOVE TO EFFICIENT SEARCH ALGORITHM
-
-    $SortedLocker = $Global:CredLocker | Sort-Object -Property 'Id'
-    foreach ($Cred in $SortedLocker) {
-        if ($Cred.Id -eq $Id) {
-            $Cred
-            break
-        }
-    }
 }
 #endregion
 
@@ -271,13 +265,21 @@ function Add-PPCredential {
 function Save-PPCredential {
 <#
     .Synopsis
-    Short description
+    Saves CredLocker to disk in clixml format.
     .DESCRIPTION
-    Long description
+    The Save-PPCredential cmdlet saves the CredLocker, containing PPCredential objects to disk.
+
+    The CredLocker is saved to the same directory as a user's PowerShell profile in clixml format.
     .EXAMPLE
-    Example of how to use this cmdlet
-    .EXAMPLE
-    Another example of how to use this cmdlet
+    Save-PPCredential
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General/PowerPass
+    .LINK
+    Open-PPCredential
+    .LINK
+    New-PPCredential
+    .LINK
+    Add-PPCredential
 #>
     [CmdletBinding()]
     Param ()
@@ -289,13 +291,15 @@ function Save-PPCredential {
 function Open-PPCredential {
 <#
     .Synopsis
-    Short description
+    Opens the clixml file on disk and populates the CredLocker.
     .DESCRIPTION
-    Long description
+    The Open-PPCredential cmdlet opens the clixml file in the same directory as a user's PowerShell Profile and loads the contents into the CredLocker.
     .EXAMPLE
-    Example of how to use this cmdlet
-    .EXAMPLE
-    Another example of how to use this cmdlet
+    Open-PPCredential
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General/PowerPass
+    .LINK
+    Save-PPCredential
 #>
 
     [CmdletBinding()]
@@ -308,17 +312,42 @@ function Open-PPCredential {
 function Search-PPCredential {
 <#
     .Synopsis
-    Short description
+    Gets PPCredential objects from the CredLocker.
     .DESCRIPTION
-    Long description
+    The Search-PPCredential cmdlet retrieves one or more PPCredential objects that meet the criteria specified by the parameters. Search criteria include the Id, object name and UserName. For example, you can search for all PPCredential objects that have the string 'web' in their name. You can search for objects by a specific unique Id.
     .EXAMPLE
-    Example of how to use this cmdlet
+    Search-PPCredential
+
+    This command returns all PPCredential objects in the CredLocker.
     .EXAMPLE
-    Another example of how to use this cmdlet
+    Search-PPCredential -Id 5
+
+    This command returns the PPCredential with the Id '5', if it exists.
+    .EXAMPLE
+    Search-PPCredential -UserName 'admin'
+
+    This command returns all PPCredential objects that have the string 'admin' in their name property.
+    .EXAMPLE
+    Search-PPCredential -UserName 'admin' -WholeWord
+
+    This command returns all PPCredential objects which the name property that is 'admin' in it's entirety. This is not case sensitive.
+    .EXAMPLE
+    Search-PPCredential -UserName 'admin' -SearchInCredential
+
+    This command returns all PPCredential objects which contain a PSCredential with the username 'admin'.
+    .EXAMPLE
+    Search-PPCredential -UserName 'Admin' -CaseSensitive
+
+    This command returns all PPCredential objects that have the string 'Admin' in their name property. This is case sensitive.
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General/PowerPass
+    .LINK
+    Open-PPCredential
 #>
 
     [CmdletBinding(DefaultParameterSetName='Default')]
     Param (
+        # Specifies the Name or UserName to search for.
         [Parameter(ParameterSetName='Default',
                    Mandatory=$False,
                    ValueFromPipeline=$True,
@@ -333,21 +362,26 @@ function Search-PPCredential {
         [ValidateNotNullorEmpty()]
         [string[]]$UserName,
 
+        # Specifies that the search should be run against the internal PSCredential's UserName property.
         [Parameter(ParameterSetName='Default')]
         [switch]$SearchInCredential,
         
+        # When supplied, the search will be case sensitive. 
         [Parameter(ParameterSetName='Default')]
         [alias('Case')]
         [switch]$CaseSensitive,
 
+        # When supplied, PPCredentials will only be returned if the UserName parameter is matched in its entirety.
         [Parameter(ParameterSetName='Default')]
         [alias('Exact')]
         [switch]$WholeWord,
 
+        # When supplied, a Regex search will be performed, cannot be paired with the CaseSensitive parameter.
         [Parameter(ParameterSetName='Regex',
                    Mandatory=$True)]
         [switch]$Regex,
 
+        # Specifies that a PPCredential with a matching Id should be returned.
         [Parameter(ParameterSetName='Id',
                    Mandatory=$True)]
         [uint32]$Id
@@ -356,46 +390,58 @@ function Search-PPCredential {
     begin {}
     process {
         if ($PSCmdlet.ParameterSetName -eq 'Default' -and $UserName -eq $null) {
+            Write-Verbose -Message 'Displaying all PPCredential objects in CredLocker.'
             $Global:CredLocker
         }
         if ($PSCmdlet.ParameterSetName -eq 'Id') {
+            Write-Verbose -Message 'Performing Id lookup.'
             $Global:CredLocker | Where-Object -FilterScript { $_.Id -eq $Id }
         } else {
             foreach ($searchCase in $UserName) {
+                Write-Verbose -Message "Searching for $searchCase."
                 foreach ($cred in $Global:CredLocker) {
+                    Write-Verbose -Message "Testing against $cred."
                     $search = $cred.Name
-                    if ($SearchInCredential) { $search = $cred.Credential.UserName }
+                    if ($SearchInCredential) {
+                        Write-Verbose -Message "Testing against $cred's UserName."
+                        $search = $cred.Credential.UserName
+                    }
 
                     if ($Regex) {
                         if ($search -match $searchCase) {
+                            Write-Verbose -Message 'Match found by Regex search.'
                             $cred
                         }
                     } else {
                         if ($WholeWord) {    
                             if ($CaseSensitive) {
                                 if ($search -ceq $searchCase) {
+                                    Write-Verbose -Message 'Match found by case sensitive, wholeword, search.'
                                     $cred
                                 }
                             } else {
                                 if ($search -eq $searchCase) {
+                                    Write-Verbose -Message 'Match found by wholeword search.'
                                     $cred
                                 }
                             }
                         } else {
                             if ($CaseSensitive) {
+                                Write-Verbose -Message 'Match found by case sensitive search.'
                                 if ($search -clike "*$searchCase*") {
                                     $cred
                                 }
                             } else {
                                 if ($search -like "*$searchCase*") {
+                                    Write-Verbose -Message 'Match found by wildcard search.'
                                     $cred
                                 }
                             }
                         }
                     }
-                } # foreach ($cred in $Global:CredLocker)
-            } # foreach ($searchCase in $UserName)
-        } # else (not an Id search)
+                }
+            }
+        }
     }
     end {} 
 }
