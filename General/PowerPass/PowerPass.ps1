@@ -254,7 +254,7 @@ function Add-PPCredential {
     }
 
     Write-Verbose -Message "Processing $($Credential.Name)"
-    $Global:CredLocker += ($Credential)
+    $Global:CredLocker += $Credential
 
     if ($Save) {
         Write-Verbose -Message 'Saving CredLocker to disk.'
@@ -306,7 +306,7 @@ function Open-PPCredential {
     Param ()
 
     $OpenPath = Join-Path (Split-Path $profile) 'PPCredential.clixml'
-    $global:CredLocker = Import-Clixml -Path $OpenPath
+    $Global:CredLocker += Import-Clixml -Path $OpenPath
 }
 
 function Search-PPCredential {

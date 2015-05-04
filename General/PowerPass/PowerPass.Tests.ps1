@@ -1,56 +1,73 @@
 ﻿. .\PowerPass.ps1
+$testhost = $env:COMPUTERNAME
 
 Describe 'PowerPass' {
-    $clixml = Import-Clixml -Path 'C:\GitHub\powershell-depot\General\PowerPass\PPCredential.Tests.clixml'
+    $clixml = Import-Clixml -Path ".\PPCredential-$testhost.Tests.clixml"
     Mock Import-Clixml { return $clixml }
+    $testPPCredential = @()
+    $Global:CredLocker = @()
 
-    Context 'testing Open-PPCredential cmdlet' {
-        It 'opened the credential locker' {
+    Context 'Open-PPCredential' {
+        It 'opened the clixml file on disk' {
             Open-PPCredential | Should Be $null
         }
-        It 'CredLocker is not empty' {
-            $global:credlocker | Should Not BeNullOrEmpty
+        It 'loaded two PPCredential objects into the CredLocker' {
+            ($global:credlocker | Measure-Object).Count | Should Be 2
         }
     }
 
-    Context 'testing Show-PPCredential cmdlet' {
-        It 'shows only one PPCredential' {
-            (Show-PPCredential | Measure-Object).Count | Should be 1
+    Context 'New-PPCredential' {
+        $Cred = $Global:CredLocker[0].Credential
+        $Global:testPPCredential = New-PPCredential -Name 'Third Test Account' -Folder 'Test' -Note 'Not going to be saved to disk' -Credential $Cred
+
+        It "created new PPCredential object with the name 'Third Test Account'" {
+            $Global:testPPCredential.Name | Should Be 'Third Test Account'
         }
-        It 'shows the Pester test account' {
-            (Show-PPCredential)[0].Name | Should be 'Pester Test Account'
+        It "created new PPCredential object in the 'Test' folder" {
+            $Global:testPPCredential.Folder | Should Be 'Test'
+        }
+        It "created new PPCredential object with the note 'Not going to be saved to disk'" {
+            $Global:testPPCredential.Notes | Should Be 'Not going to be saved to disk'
+        }
+        It 'created new PPCredential object that is not set as a favorite' {
+            $Global:testPPCredential.Favorite | Should Be $false
         }
     }
 
-    Context 'testing New-PPCredential cmdlet' {
-        $Cred = (Show-PPCredential)[0].Credential
-        $testPPCredential = New-PPCredential -Name 'Second Test Account' -Folder 'Test' -Note 'Not going to be saved to disk' -Credential $Cred
-
-        It "has the name 'Second Test Account'" {
-            $testPPCredential.Name | Should Be 'Second Test Account'
-        }
-        It "is in the 'Test' folder" {
-            $testPPCredential.Folder | Should Be 'Test'
-        }
-        It "has the note 'Not going to be saved to disk'" {
-            $testPPCredential.Notes | Should Be 'Not going to be saved to disk'
-        }
-        It 'is not set as favorite' {
-            $testPPCredential.Favorite | Should Be $false
+    Context 'Add-PPCredential' {
+        Add-PPCredential -Credential $Global:testPPCredential 
+        It 'added a PPCredential to the CredLocker, total is now 3' {
+            ($Global:CredLocker | Measure-Object).Count | Should Be 3
         }
     }
 
-    #Context 'testing Add-PPCredential cmdlet' {
-    #    It 'adds a PPCredential to the CredLocker' {
-    #        Add-PPCredential -Credential $testPPCredential | Should Not Throw
-    #    }
-    #}
-
-    Context 'testing Save-PPCredential cmdlet' {
-        It 'saves CredLocker to disk' {
+    Context 'Save-PPCredential' {
+        It 'saved the CredLocker array to disk as a clixml file' {
             Mock Export-Clixml {}
             Save-PPCredential    
             Assert-MockCalled Export-Clixml -Exactly 1
+        }
+    }
+
+    Context 'Search-PPCredential' {
+        It 'returns all objects in the CredLocker' {
+            (Search-PPCredential | Measure-Object).Count | Should Be 3
+        }
+
+        It 'returns all objects that have "Pester" in their name (case insensitive)' {
+            (Search-PPCredential -UserName 'pester' | Measure-Object).Count | Should Be 1
+        }
+
+        It 'returns all objects that have "pester" in their name (case sensitive)' {
+            (Search-PPCredential -UserName 'pester' -CaseSensitive | Measure-Object).Count | Should Be 0
+        }
+
+        It 'returns all objects that have "pester" in their name, if that is the entire name (whole word)' {
+            (Search-PPCredential -UserName 'pester' -WholeWord | Measure-Object).Count | Should Be 0
+        }
+
+        It 'returns the object with Id 2' {
+            (Search-PPCredential -Id 2 | Measure-Object).Count | Should Be 1
         }
     }
 }
