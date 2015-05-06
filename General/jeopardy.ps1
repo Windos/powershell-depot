@@ -1,4 +1,11 @@
-﻿class Category {
+﻿<#
+ #    ToDo:
+ #    * Ensure all GameCats are unique.
+ #    * Rewrite parameter help from jservice.io
+ #    * Firgure out how to retirve the answers, may end up needing to store them locally.
+ #>
+
+class JeoCategory {
     #region class properties
     [uint64] $id;
     [string] $title;
@@ -6,7 +13,7 @@
     #endregion
 
     #region class constructors
-    Category ([uint64] $id, [string] $title, [uint64] $clues_count) {
+    JeoCategory ([uint64] $id, [string] $title, [uint64] $clues_count) {
         $this.id = $id
         $this.title = $title
         $this.clues_count = $clues_count
@@ -17,7 +24,7 @@
     #endregion
 }
 
-class Clue {
+class JeoClue {
     #region class properties
     [uint64] $id;
     [string] $question;
@@ -26,7 +33,7 @@ class Clue {
     #endregion
 
     #region class constructors
-    Clue ([uint64] $id, [string] $question, [uint64] $value, [uint64] $category_id) {
+    JeoClue ([uint64] $id, [string] $question, [uint64] $value, [uint64] $category_id) {
         $this.id = $id
         $this.question = $question
         $this.value = $value
@@ -38,85 +45,192 @@ class Clue {
     #endregion
 }
 
-#$AllGameCats = @()
+$AllGameCats = @()
 $GameCats = @() # The six categories used this round
 $GameClues = @()
 $offset = $null
 
 function Get-AllCategories {
-    param ([uint64] $offset)
+<#
+    .Synopsis
+    Gets all Jeopardy categories from jservice.io
+    .DESCRIPTION
+    The Get-AllCategories cmdlet gets all of the Jeopardy categories available on jservice.io. Categories containing ten or more clues are stored for later use in $AllGameCats.
+    .EXAMPLE
+    Get-AllCategories
+    
+    This command returns all categories on jservice.io
+    .EXAMPLE
+    Get-AllCategories -Offset 12345
+    
+    This command returns all categories on jservice.io starting from the category after Id 12345.
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param
+    (
+        # From jservice.io: offsets the starting id of categories returned. Useful in pagination.
+        [Parameter(Mandatory=$false,
+                   Position=0)]
+        [uint64] $Offset
+    )
 
     if ($offset -eq $null) {
+        Write-Verbose -Message 'Getting first page of categories from jservice.io'
         $cats = Invoke-WebRequest -Uri 'http://jservice.io/api/categories?count=100' | ConvertFrom-Json
     } else {
+        Write-Verbose -Message "Getting page of categories, offset to category ID $offset"
         $uri = 'http://jservice.io/api/categories?count=100&offset=' + $offset
         $cats = Invoke-WebRequest -Uri $uri | ConvertFrom-Json
     }
 
     foreach ($cat in $cats) {
         if ($cat.clues_count -ge 10) {
-            $JeoCat = [Category]::new($cat.id, $cat.title, $cat.clues_count)
+            $JeoCat = [JeoCategory]::new($cat.id, $cat.title, $cat.clues_count)
             $Global:AllGameCats += $JeoCat
         }
     }
     
     $catsReturned = ($cats | Measure-Object).Count
     if ($catsReturned -eq 100) {
-        GetAllCategories -offset ($cats[-1].id)
+        Write-Verbose -Message 'Another page of categories are available.'
+        Get-AllCategories -offset ($cats[-1].id)
     }
 }
 
 function Get-RandomCategory {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    [OutputType([JeoCategory])]
+
     $catRand = Get-Random -Minimum 0 -Maximum (($Global:AllGameCats | Measure-Object).Count - 1)
     $Global:AllGameCats[$catRand]
 }
 
 function Get-Clues {
-    param ([int] $category)
-    try {
-        $tempAdd = @()
-        for ($x = 200; $x -le 1000; $x = $x + 200) {
-            $uri = 'http://jservice.io/api/clues?value=' + $x + '&category=' + $category
-            $clues = Invoke-WebRequest -Uri $uri | ConvertFrom-Json
-            
-            $tempClues = @()
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   ValueFromPipelineByPropertyName=$true,
+                   ValueFromPipeline=$true,
+                   Position=0)]
+        [int] $Category
+    )
 
-            foreach ($clue in $clues) {
-                if ($clue.invalid_count -eq $null -or $clue.invalid_count -eq '') {
-                    $JeoClue = [Clue]::new($clue.id, $clue.question, $clue.value, $clue.category_id)
-                    $tempClues += $JeoClue
+    begin {}
+    process {
+        try {
+            $tempAdd = @()
+            for ($x = 200; $x -le 1000; $x = $x + 200) {
+                Write-Verbose -Message "Getting a clue from $category with value of $x"
+                $uri = 'http://jservice.io/api/clues?value=' + $x + '&category=' + $category
+                $clues = Invoke-WebRequest -Uri $uri | ConvertFrom-Json
+                
+                $tempClues = @()
+
+                foreach ($clue in $clues) {
+                    if ($clue.invalid_count -eq $null -or $clue.invalid_count -eq '') {
+                        $JeoClue = [JeoClue]::new($clue.id, $clue.question, $clue.value, $clue.category_id)
+                        $tempClues += $JeoClue
+                    }
                 }
-            }
 
-            $clueRand = Get-Random -Minimum 0 -Maximum (($tempClues | Measure-Object).Count - 1)
-            $tempAdd += $tempClues[$clueRand]
+                Write-Verbose -Message "Choosing a random valid clue."
+                $clueRand = Get-Random -Minimum 0 -Maximum (($tempClues | Measure-Object).Count - 1)
+                $tempAdd += $tempClues[$clueRand]
+            }
+            $Global:GameClues += $tempAdd
+        } catch {
+            Write-Verbose -Message "$category did not contain a full set of valid clues."
+            $category
         }
-        $Global:GameClues += $tempAdd
-    } catch {
-        $category
     }
+    end {}
 }
 
 function Start-Game {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding(HelpUri = 'https://github.com/Windos/powershell-depot/tree/master/General')]
+    Param ()
+
+    Write-Verbose -Message 'Emptying game arrays.'
     $Global:GameCats = @()
     $Global:GameClues = @()
+
     for ($i = 1; $i -le 6; $i++) { 
         $Global:GameCats += Get-RandomCategory
     }
 
     $errors = @()
+
     foreach ($gameCat in $Global:GameCats) {
         $errors += Get-Clues -category $gameCat.id
     }
+
     if (($errors | Measure-Object).Count -ge 1) {
         foreach ($error in $errors) {
+            Write-Warning -Message "A complete clue set for category $error could not be generated, choosing replacement category."
             Repair-ProblemCategory -category $error
         }
     }
 }
 
 function Repair-ProblemCategory {
-    param ([int] $category)
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   Position=0)]
+        [int] $Category
+    )
 
     $newGameCats = @()
     foreach ($cat in $Global:GameCats) {
@@ -129,13 +243,35 @@ function Repair-ProblemCategory {
     $Global:GameCats += $newCat
     $moreErrors = Get-Clues -category $newCat.id
     if (($moreErrors | Measure-Object).Count -ge 1) {
-        Write-Host "Error on $($newCat.id)"
         Repair-ProblemCategory -category $newCat.id
     }
 }
 
 function Request-JeoClue {
-    param ([uint64] $category, [uint64] $value)
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   Position=0)]
+        [uint64] $Category,
+
+        # Param2 help description
+        [Parameter(Mandatory=$true,
+                   Position=1)]
+        [uint64] $Value
+    )
 
     $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
 }
