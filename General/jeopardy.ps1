@@ -1,4 +1,6 @@
-﻿# The MIT License (MIT)
+﻿#region LICENSE
+
+# The MIT License (MIT)
 # 
 # Copyright (c) 2015 Joshua King
 # 
@@ -20,11 +22,24 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
 # SOFTWARE.
 
+#endregion
+
 <#
     ToDo:
-    * Ensure all GameCats are unique.
-    * Complete comment based help.
-    * Figure out how to retirve the answers, may end up needing to store them locally.
+    * Complete comment based help. Will do this during a lazy lunch hour stream.
+    * Decide whether to store answer with clue or in a dedicated hash table.
+    * error checking, category is valid?
+    * parameter validation scripts/dynamic valid sets?
+        * Possible to have valid categories appear in intellisense?
+    * Better answer validation, can currently supply a single letter as wildcards are used (does the answer contain an a?)
+    * Answers should be returned in the form of a question.
+       * Is this how we should roll in our variation of Jeopardy?
+    * Show game state on completion of 'start-game' and answer a question has been answered/timed out, e.g.
+        State Capitals: $200, $400, $X (already done), $800, $1000
+        and so on for the other categories.
+    * Find out if it possible to keep the prompt interactive while a progress bar is displayed?
+        * Show clue count down (and current clue) in a progress bar.
+    * Save all clues to disk. Make refreshing them a switch parameter on start-game cmdlet.
 #>
 
 class JeoCategory {
@@ -50,14 +65,16 @@ class JeoClue {
     #region class properties
     [uint64] $id;
     [string] $question;
+    [string] $answer;
     [uint64] $value;
     [uint64] $category_id;
     #endregion
 
     #region class constructors
-    JeoClue ([uint64] $id, [string] $question, [uint64] $value, [uint64] $category_id) {
+    JeoClue ([uint64] $id, [string] $question, [string] $answer, [uint64] $value, [uint64] $category_id) {
         $this.id = $id
         $this.question = $question
+        $this.answer = $answer
         $this.value = $value
         $this.category_id = $category_id
     }
@@ -67,7 +84,6 @@ class JeoClue {
     #endregion
 }
 
-$AllGameCats = @()
 $GameCats = @() # The six categories used this round
 $GameClues = @()
 $offset = $null
