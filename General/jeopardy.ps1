@@ -27,7 +27,6 @@
 <#
     ToDo:
     * Complete comment based help. Will do this during a lazy lunch hour stream.
-    * Decide whether to store answer with clue or in a dedicated hash table.
     * error checking, category is valid?
     * parameter validation scripts/dynamic valid sets?
         * Possible to have valid categories appear in intellisense?
@@ -40,6 +39,10 @@
     * Find out if it possible to keep the prompt interactive while a progress bar is displayed?
         * Show clue count down (and current clue) in a progress bar.
     * Save all clues to disk. Make refreshing them a switch parameter on start-game cmdlet.
+    * store current clue in memory, user doesn't need to supply category and value when answering
+    * change request to take a string: Request-JeoClue "State Capitals for $200"
+    * show user what the answer was when clue times out
+    * consider using events to perform an ction automatically on time out rather than waiting for the user to submit an answer.
 #>
 
 class JeoCategory {
@@ -65,18 +68,18 @@ class JeoClue {
     #region class properties
     [uint64] $id;
     [string] $question;
-    [string] $answer;
     [uint64] $value;
     [uint64] $category_id;
+    [bool] $alreadyDone;
     #endregion
 
     #region class constructors
-    JeoClue ([uint64] $id, [string] $question, [string] $answer, [uint64] $value, [uint64] $category_id) {
+    JeoClue ([uint64] $id, [string] $question, [uint64] $value, [uint64] $category_id) {
         $this.id = $id
         $this.question = $question
-        $this.answer = $answer
         $this.value = $value
         $this.category_id = $category_id
+        $this.alreadyDone = $false
     }
     #endregion
 
@@ -84,8 +87,10 @@ class JeoClue {
     #endregion
 }
 
+#$AllGameCats = @()
 $GameCats = @() # The six categories used this round
 $GameClues = @()
+$answers = @{}
 $offset = $null
 
 function Get-AllCategories {
@@ -184,25 +189,33 @@ function Get-Clues {
     process {
         try {
             $tempAdd = @()
+            $tempAnsAdd = @{}
             for ($x = 200; $x -le 1000; $x = $x + 200) {
                 Write-Verbose -Message "Getting a clue from $category with value of $x"
                 $uri = 'http://jservice.io/api/clues?value=' + $x + '&category=' + $category
                 $clues = Invoke-WebRequest -Uri $uri | ConvertFrom-Json
                 
                 $tempClues = @()
+                $tempAns = @{}
 
                 foreach ($clue in $clues) {
                     if ($clue.invalid_count -eq $null -or $clue.invalid_count -eq '') {
                         $JeoClue = [JeoClue]::new($clue.id, $clue.question, $clue.value, $clue.category_id)
                         $tempClues += $JeoClue
+                        $tempAns.Add($clue.id.ToString(), $clue.answer)
                     }
                 }
 
                 Write-Verbose -Message "Choosing a random valid clue."
                 $clueRand = Get-Random -Minimum 0 -Maximum (($tempClues | Measure-Object).Count - 1)
                 $tempAdd += $tempClues[$clueRand]
+                
+                $key = ($tempClues[$clueRand]).id.ToString()
+                $value = $tempAns.($key)
+                $tempAnsAdd.Add($key,$value)
             }
             $Global:GameClues += $tempAdd
+            $Global:answers += $tempAnsAdd
         } catch {
             Write-Verbose -Message "$category did not contain a full set of valid clues."
             $category
@@ -311,5 +324,53 @@ function Request-JeoClue {
         [uint64] $Value
     )
 
-    $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
+    $NewClue = $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
+
+    if ($NewClue.alreadyDone) {
+        Write-Output 'This clue has already been done, try another.'
+    } else {
+        $NewClue
+    }
+}
+
+function Answer-JeoClue {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param (
+        # Param1 help description
+        [Parameter(Mandatory=$true,
+                   Position=0)]
+        [uint64] $Category,
+
+        # Param2 help description
+        [Parameter(Mandatory=$true,
+                   Position=1)]
+        [uint64] $Value,
+
+        # Param3 help description
+        [Parameter(Mandatory=$true,
+                   Position=1)]
+        [string] $Answer
+    )
+
+    $CurrentClue = $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
+    $CurrentAnswer = $Global:answers.($CurrentClue.id.ToString())
+
+    if ($CurrentAnswer -like "*$Answer*") {
+        Write-Output 'Correct'
+        $CurrentClue.alreadyDone = $true #might be able to just do this, otherwise will need a method within the class.
+    } else {
+        Write-Output 'Try again'
+    }
 }
