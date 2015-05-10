@@ -87,8 +87,8 @@ class JeoClue {
     #endregion
 }
 
-#$AllGameCats = @()
-$GameCats = @() # The six categories used this round
+$AllGameCats = @()
+$GameCats = @()
 $GameClues = @()
 $answers = @{}
 $offset = $null
@@ -245,20 +245,24 @@ function Start-Game {
     $Global:GameClues = @()
 
     for ($i = 1; $i -le 6; $i++) { 
-        $Global:GameCats += Get-RandomCategory
+		$newCat = Get-RandomCategory
+
+        $newCat = Get-RandomCategory
+        while ($newCat -in $Global:GameCats) {
+            $newCat = Get-RandomCategory
+        }
+        $Global:GameCats += $newCat
     }
 
     $errors = @()
 
     foreach ($gameCat in $Global:GameCats) {
-        $errors += Get-Clues -category $gameCat.id
+        $error += Get-Clues -category $gameCat.id
     }
 
-    if (($errors | Measure-Object).Count -ge 1) {
-        foreach ($error in $errors) {
-            Write-Warning -Message "A complete clue set for category $error could not be generated, choosing replacement category."
-            Repair-ProblemCategory -category $error
-        }
+    if ($error -ge 1) {
+		Write-Warning -Message "A complete clue set for category $error could not be generated, choosing replacement category."
+		Repair-ProblemCategory -category $error
     }
 }
 
@@ -291,6 +295,9 @@ function Repair-ProblemCategory {
     }
     $Global:GameCats = $newGameCats
     $newCat = Get-RandomCategory
+	while ($newCat -in $Global:GameCats) {
+        $newCat = Get-RandomCategory
+    }
     $Global:GameCats += $newCat
     $moreErrors = Get-Clues -category $newCat.id
     if (($moreErrors | Measure-Object).Count -ge 1) {
@@ -325,11 +332,21 @@ function Request-JeoClue {
     )
 
     $NewClue = $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
-
     if ($NewClue.alreadyDone) {
-        Write-Output 'This clue has already been done, try another.'
-    } else {
-        $NewClue
+		Write-Output 'This clue has already been done, try another.'
+	} else {
+	    if ((Get-job -name 'ClueCountdown' -ErrorAction SilentlyContinue) -eq $null) {
+		     {
+			    Start-Job -Name "ClueCountdown" -ScriptBlock { Start-Sleep -Seconds 60 } | Out-Null
+			    $NewClue.Question
+		    }        
+        } elseif ((Get-job -name 'ClueCountdown').State -eq 'Completed') {
+            Get-job -name 'ClueCountdown' | Remove-Job
+            Write-Output 'Previous clue timed out, please request a new one.'
+        } else {
+            Write-Output "You've already requested a clue and have time to answer it."
+
+        }
     }
 }
 
@@ -360,17 +377,27 @@ function Answer-JeoClue {
 
         # Param3 help description
         [Parameter(Mandatory=$true,
-                   Position=1)]
+                   Position=3)]
         [string] $Answer
     )
+	
+	$CurrentClue = $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
+	$realAnswer = $Global:answers.($CurrentClue.id.ToString())
 
-    $CurrentClue = $Global:GameClues | Where-Object -FilterScript {$_.category_id -eq $category -and $_.value -eq $value}
-    $CurrentAnswer = $Global:answers.($CurrentClue.id.ToString())
 
-    if ($CurrentAnswer -like "*$Answer*") {
-        Write-Output 'Correct'
-        $CurrentClue.alreadyDone = $true #might be able to just do this, otherwise will need a method within the class.
+    if ((Get-job -name 'ClueCountdown').State -ne 'Completed') {
+        if ($realAnswer -like "*$answer*") {
+
+            Write-Output 'Correct'
+            Get-job -name 'ClueCountdown' | Stop-Job | Remove-Job
+			$CurrentClue.alreadyDone = $true
+        } else {
+            Write-Output 'Try again'
+        }
+
     } else {
-        Write-Output 'Try again'
+        Write-Output 'Too late'
+        Get-job -name 'ClueCountdown' | Remove-Job
+		$CurrentClue.alreadyDone = $true
     }
 }
