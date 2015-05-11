@@ -27,9 +27,6 @@
 <#
     ToDo:
     * Complete comment based help. Will do this during a lazy lunch hour stream.
-    * error checking, category is valid?
-    * parameter validation scripts/dynamic valid sets?
-        * Possible to have valid categories appear in intellisense?
     * Better answer validation, can currently supply a single letter as wildcards are used (does the answer contain an a?)
     * Answers should be returned in the form of a question.
        * Is this how we should roll in our variation of Jeopardy?
@@ -38,11 +35,12 @@
         and so on for the other categories.
     * Find out if it possible to keep the prompt interactive while a progress bar is displayed?
         * Show clue count down (and current clue) in a progress bar.
-    * Save all clues to disk. Make refreshing them a switch parameter on start-game cmdlet.
+        * # Might be a bit hacky if it's even possible. #
     * store current clue in memory, user doesn't need to supply category and value when answering
     * change request to take a string: Request-JeoClue "State Capitals for $200"
     * show user what the answer was when clue times out
     * consider using events to perform an ction automatically on time out rather than waiting for the user to submit an answer.
+    * check that clues do not have a blank question.
 #>
 
 class JeoCategory {
@@ -87,11 +85,52 @@ class JeoClue {
     #endregion
 }
 
+
+
 $AllGameCats = @()
 $GameCats = @()
 $GameClues = @()
 $answers = @{}
 $offset = $null
+
+#region HelperFunctions
+
+function Validate-Category {
+    <#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+    .LINK
+    https://github.com/Windos/powershell-depot/tree/master/General
+#>
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory=$true,
+                   Position=0)]
+        [int] $Category
+    )
+
+    $valid = $false
+
+    foreach ($gameCat in $Global:GameCats) {
+        if ($gameCat.Id -eq $Category) {
+            $valid = $true
+        }
+    }
+
+    if ($valid) {
+        $valid
+    } else {
+        throw "$Category is not a valid category ID for this game."
+    }
+}
+
+#endregion
 
 function Get-AllCategories {
 <#
@@ -140,6 +179,9 @@ function Get-AllCategories {
         Write-Verbose -Message 'Another page of categories are available.'
         Get-AllCategories -offset ($cats[-1].id)
     }
+
+    $savePath = Join-Path -Path (Split-Path $profile) -ChildPath JeopardyCategories.csv
+    $Global:AllGameCats | Export-csv -Path $savePath
 }
 
 function Get-RandomCategory {
@@ -238,15 +280,39 @@ function Start-Game {
     https://github.com/Windos/powershell-depot/tree/master/General
 #>
     [CmdletBinding(HelpUri = 'https://github.com/Windos/powershell-depot/tree/master/General')]
-    Param ()
+    Param ([switch] $RefreshCategories)
 
     Write-Verbose -Message 'Emptying game arrays.'
     $Global:GameCats = @()
     $Global:GameClues = @()
 
-    for ($i = 1; $i -le 6; $i++) { 
-		$newCat = Get-RandomCategory
+    $loadPath = Join-Path -Path (Split-Path $profile) -ChildPath JeopardyCategories.csv
+    if ($RefreshCategories) {
+        Write-Verbose 'Refresh'
+        $AllGameCats = @()
+        Get-AllCategories
+    } elseif (($Global:AllGameCats | Measure-Object).Count -eq 0) {
+        Write-Verbose 'Array empty'
+        if ((Test-Path -Path $loadPath)) {
+            Write-Verbose 'Loading from disk'
+            $Global:AllGameCats = Import-Csv -Path $loadPath
+        } else {
+            Write-Verbose 'loading from api'
+            Get-AllCategories
+        }
+    } else { Write-Verbose 'array not empty' }
 
+    # But, it needs to be tested.
+    
+    
+    if ((Test-Path -Path $loadPath)) {
+        $Global:AllGameCats = Import-Csv -Path $loadPath
+    } else {
+        Get-AllCategories
+    }
+    
+
+    for ($i = 1; $i -le 6; $i++) {
         $newCat = Get-RandomCategory
         while ($newCat -in $Global:GameCats) {
             $newCat = Get-RandomCategory
@@ -254,9 +320,8 @@ function Start-Game {
         $Global:GameCats += $newCat
     }
 
-    $errors = @()
-
     foreach ($gameCat in $Global:GameCats) {
+        Write-Debug "Getting clues for $($gameCat.id)"
         $error += Get-Clues -category $gameCat.id
     }
 
@@ -323,6 +388,7 @@ function Request-JeoClue {
         # Param1 help description
         [Parameter(Mandatory=$true,
                    Position=0)]
+        [ValidateScript({ Validate-Category -Category $_ })]
         [uint64] $Category,
 
         # Param2 help description
@@ -336,10 +402,8 @@ function Request-JeoClue {
 		Write-Output 'This clue has already been done, try another.'
 	} else {
 	    if ((Get-job -name 'ClueCountdown' -ErrorAction SilentlyContinue) -eq $null) {
-		     {
-			    Start-Job -Name "ClueCountdown" -ScriptBlock { Start-Sleep -Seconds 60 } | Out-Null
-			    $NewClue.Question
-		    }        
+			Start-Job -Name "ClueCountdown" -ScriptBlock { Start-Sleep -Seconds 60 } | Out-Null
+			$NewClue.Question
         } elseif ((Get-job -name 'ClueCountdown').State -eq 'Completed') {
             Get-job -name 'ClueCountdown' | Remove-Job
             Write-Output 'Previous clue timed out, please request a new one.'
@@ -368,6 +432,7 @@ function Answer-JeoClue {
         # Param1 help description
         [Parameter(Mandatory=$true,
                    Position=0)]
+        [ValidateScript({ Validate-Category -Category $_ })]
         [uint64] $Category,
 
         # Param2 help description
