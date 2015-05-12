@@ -27,6 +27,7 @@
 <#
     ToDo:
     * Complete comment based help. Will do this during a lazy lunch hour stream.
+    * include about_Jeopardy help.
     * Better answer validation, can currently supply a single letter as wildcards are used (does the answer contain an a?)
     * Answers should be returned in the form of a question.
        * Is this how we should roll in our variation of Jeopardy?
@@ -129,6 +130,8 @@ function Validate-Category {
         throw "$Category is not a valid category ID for this game."
     }
 }
+
+function PesterDummy ($Source) {}
 
 #endregion
 
@@ -295,22 +298,13 @@ function Start-Game {
         Write-Verbose 'Array empty'
         if ((Test-Path -Path $loadPath)) {
             Write-Verbose 'Loading from disk'
+            PesterDummy -Source 'LoadFromDisk'
             $Global:AllGameCats = Import-Csv -Path $loadPath
         } else {
-            Write-Verbose 'loading from api'
+            Write-Warning 'Loading categories from the internet, this could take a few minutes.'
             Get-AllCategories
         }
-    } else { Write-Verbose 'array not empty' }
-
-    # But, it needs to be tested.
-    
-    
-    if ((Test-Path -Path $loadPath)) {
-        $Global:AllGameCats = Import-Csv -Path $loadPath
-    } else {
-        Get-AllCategories
-    }
-    
+    } else { Write-Verbose 'array not empty' }       
 
     for ($i = 1; $i -le 6; $i++) {
         $newCat = Get-RandomCategory
@@ -320,14 +314,18 @@ function Start-Game {
         $Global:GameCats += $newCat
     }
 
+    $errors = @()
+
     foreach ($gameCat in $Global:GameCats) {
         Write-Debug "Getting clues for $($gameCat.id)"
-        $error += Get-Clues -category $gameCat.id
+        $errors += Get-Clues -category $gameCat.id
     }
 
-    if ($error -ge 1) {
-		Write-Warning -Message "A complete clue set for category $error could not be generated, choosing replacement category."
-		Repair-ProblemCategory -category $error
+    if (($errors | Measure-Object).Count -ge 1) {
+        foreach ($error in $errors) {
+            Write-Warning -Message "A complete clue set for category $error could not be generated, choosing replacement category."
+            Repair-ProblemCategory -category $error
+        }
     }
 }
 
