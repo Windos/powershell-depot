@@ -45,7 +45,9 @@
         $secondsRemainingChild = $totalSecondsChild - $secondsElapsedChild
         $percentDoneChild = ($secondsElapsedChild / $totalSecondsChild) * 100
 
-        Write-Progress -id 1 -ParentId 0 -Activity $loadingMessage -PercentComplete $percentDoneChild -SecondsRemaining $secondsRemainingChild
+        if ($percentDoneChild -le 100) {
+			Write-Progress -id 1 -ParentId 0 -Activity $loadingMessage -PercentComplete $percentDoneChild -SecondsRemaining $secondsRemainingChild
+		}
 
         if ($percentDoneChild -ge 100 -and $percentDone -le 98) {
             $totalSecondsChild = Get-Random -Minimum 4 -Maximum 30
