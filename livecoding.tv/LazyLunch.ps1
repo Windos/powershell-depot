@@ -1,1 +1,1 @@
-﻿$Host.UI.RawUI.WindowTitle = '[Admin] PS ISE - Luzy Lunch Hour, No Mic or Music (BYO?)'
+﻿$Host.UI.RawUI.WindowTitle = '[Admin] PS ISE - Luzy Lunch Hour, No Mic or Music (BYO?) - Documentation and "Verbosity"'
