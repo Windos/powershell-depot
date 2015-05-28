@@ -113,6 +113,11 @@
     $Global:driver.Navigate().GoToUrl('https://www.livecoding.tv/chat/windos/')
     
     $Global:viewersGreeted = @()
+    $Global:newViewers = @{}
+    $Global:activeChatter = @()
+    $Global:lastTwitterLink = $null
+    $Global:PBCommands = @{'!twitter' = 'Follow Windos on Twitter! https://twitter.com/WindosNZ';
+                           '!microsoft' = 'Windos doesn''t work for Microsoft'}
 }
 
 function Out-Stream {
@@ -150,6 +155,39 @@ function Out-Stream {
     }
 
     End {}
+}
+
+function Read-Stream {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param ()
+
+    $chatMessages = $Global:driver.FindElementsByClassName('lctv-premium')
+
+    foreach ($chatMessage in $chatMessages) {
+        $parts = ($chatMessage.GetAttribute('innerHTML')).Split('>')
+        $username = $parts[1].Replace('</a', '')
+
+        #if ($username -ne 'Windos' -and $username -ne 'PowerBot') {
+        if ($username -ne 'PowerBot') {
+            $messageText = $parts[2]
+
+            $properties = @{'UserName'=$username;
+                            'Message'=$messageText}
+            $Result = New-Object -TypeName psobject -Property $properties
+            $Result
+        }
+    }
 }
 
 function Get-StreamViewers {
@@ -192,6 +230,16 @@ function Greet-StreamViewers {
 
     $user = $null
     $users = Get-StreamViewers
+    $testTime = (Get-Date).AddMinutes(-2)
+
+    $Greetings = @('Welcome {0}!',
+                   'Hey {0}',
+                   'How''s it going, {0}?',
+                   'Hey {0}, how''s it going?',
+                   'Good to see you, {0}',
+                   'Hi {0}',
+                   'Howdy {0}'
+    )
 
     foreach ($user in $users) {
         Write-Verbose $user
@@ -209,25 +257,144 @@ function Greet-StreamViewers {
             }
             
             if (!$greeted) {
-                Out-Stream -Message "Welcome $user!"
-                $Global:viewersGreeted += $user
+                if ($Global:newViewers.ContainsKey($user)) {
+                    $userTime = $Global:newViewers.$user
+                    if ($userTime -le $testTime) {
+                        $rand = $null
+                        $rand = Get-Random -Minimum 0 -Maximum ($Greetings.Length - 1)
+                        Out-Stream -Message ($Greetings[$rand] -f $user)
+                        $Global:viewersGreeted += $user
+                    }
+                } else {
+                    $Global:newViewers.Add($user,(Get-Date))
+                }
             }
         }
     }
 }
 
-function Greet-Loop {
+function Start-Raffle {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param ()
+
+    $userMessages = Read-Stream
+    $uniqueUsers = ($userMessages | Group-Object -Property UserName).Name
+    $uniqueUsers
+}
+
+# function Send-TwitterLink {
+# <#
+#     .Synopsis
+#     Short description
+#     .DESCRIPTION
+#     Long description
+#     .EXAMPLE
+#     Example of how to use this cmdlet
+#     .EXAMPLE
+#     Another example of how to use this cmdlet
+# #>
+#     [CmdletBinding()]
+#     [Alias()]
+#     Param ()
+# 
+#     $userMessages = Read-Stream
+#     $linkLimit = (Get-Date).AddHours(-1)
+# 
+#     if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
+#         foreach ($userMessage in $userMessages) {
+#             if ($userMessage.Message -eq '!twitter') {
+#                 Out-Stream 'Follow Windos on Twitter! https://twitter.com/WindosNZ'
+#                 $Global:lastTwitterLink = Get-Date
+#             }
+#         }
+#     }
+# }
+
+function Add-PBCommand {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param ()
+
+    $userMessages = Read-Stream
+    $linkLimit = (Get-Date).AddHours(-1)
+
+    foreach ($userMessage in $userMessages) {
+        if ($userMessage.UserName -eq 'Windos') {
+            if ($userMessage.Message -like "Add-PBCommand*") {
+                $parts = $userMessage.Message.Split('-')
+                $key = ($parts[2].Replace('command ','')).Trim().Trim("'")
+
+                if (!($Global:PBCommands.ContainsKey($key))) {
+                    $value = ($parts[3].Replace('message ','')).Trim().Trim("'")
+                    $Global:PBCommands.Add($key, $value)
+                }
+            }
+        }
+    }
+}
+
+function Check-PBCommand {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param ()
+
+    $userMessages = Read-Stream
+    $linkLimit = (Get-Date).AddHours(-1)
+
+    if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
+        foreach ($userMessage in $userMessages) {
+            if ($Global:PBCommands.ContainsKey($userMessage.Message)) {
+                $Global:PBCommands.($userMessage.Message) | Out-Stream
+                $Global:lastTwitterLink = Get-Date
+            }
+        }
+    }
+}
+
+function Start-PBLoop {
     Start-Job -Name 'Greeter' -ScriptBlock {
         try {
             . 'C:\GitHub\powershell-depot\livecoding.tv\PowerBot.ps1'
             Initialize-PowerBot
             While ($true) {
                 Greet-StreamViewers
+                Check-PBCommand
                 Start-Sleep -Seconds 1
             }
         } catch {
         } finally {
             $driver.Quit()
         }
-    }
+    } | Out-Null
 }
