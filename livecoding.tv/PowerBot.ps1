@@ -1,36 +1,119 @@
-﻿Add-Type -Path 'C:\references\selenium\Selenium.WebDriverBackedSelenium.dll'
-Add-Type -Path 'C:\references\selenium\ThoughtWorks.Selenium.Core.dll'
-Add-Type -Path 'C:\references\selenium\WebDriver.dll'
-Add-Type -Path 'C:\references\selenium\WebDriver.Support.dll'
+﻿function Initialize-PowerBot {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param (
+        [string] $referencesPath = 'C:\References'
+    )
 
-$service = [OpenQA.Selenium.PhantomJS.PhantomJSDriverService]::CreateDefaultService('C:\references\')
-$service.HideCommandPromptWindow = $true
-
-$Global:driver = New-Object OpenQA.Selenium.PhantomJS.PhantomJSDriver -ArgumentList @(,$service)
-
-$email = ''
-
-$pass = ''
-
-$Global:driver.Navigate().GoToUrl('https://www.livecoding.tv/accounts/login/')
-
-$userNameField = $Global:driver.FindElementById('id_login')
-$passwordField = $Global:driver.FindElementById('id_password')
-$buttons = $Global:driver.FindElementsByTagName('button')
-
-foreach ($button in $buttons) {
-    if ($button.Text -eq 'Login') {
-        $loginButton = $button
+    if (!(Test-Path -Path $referencesPath)) {
+        Write-Verbose -Message "$referencesPath does not exist, creating specified directory."
+        New-Item -ItemType Directory -Path $referencesPath | Out-Null
     }
+    
+    Start-Job -Name 'Selenium' -ScriptBlock {
+        $referencesPath = $args[0]
+        if (!(Test-Path -Path (Join-Path -Path $referencesPath -ChildPath 'selenium\Selenium.WebDriverBackedSelenium.dll'))) {
+            Write-Verbose -Message "Selenium not present in $referencesPath, downloading latest version."
+
+            $sSource = 'http://selenium-release.storage.googleapis.com/2.45/selenium-dotnet-2.45.0.zip'
+            $sArchive = Join-Path -Path $referencesPath -ChildPath 'selenium.zip'
+ 
+            Invoke-WebRequest $sSource -OutFile $sArchive
+
+            Write-Verbose -Message "Expanding Selenium archive."
+
+            Expand-Archive -Path $sArchive -DestinationPath (Join-Path -Path $referencesPath -ChildPath '\temp-selenium')
+
+            Write-Verbose -Message "Copying component files to permenant location."
+            $seleniumPath = Join-Path -Path $referencesPath -ChildPath 'Selenium\'
+
+            if (!(Test-Path -Path $seleniumPath)) {
+                New-Item -ItemType Directory -Path $seleniumPath | Out-Null
+            }
+            Copy-Item -Path (Join-Path -Path $referencesPath -ChildPath '\temp-selenium\net40\*') -Destination $seleniumPath
+
+            Remove-Item -Path $sArchive
+            Remove-Item -Path (Join-Path -Path $referencesPath -ChildPath '\temp-selenium') -Recurse -Force
+        }
+    } -ArgumentList @(,$referencesPath) | Out-Null
+
+    Start-Job -Name 'PhantomJS' -ScriptBlock {
+        $referencesPath = $args[0]
+        if (!(Test-Path -Path (Join-Path -Path $referencesPath -ChildPath '\PhantomJS\PhantomJS.exe'))) {
+            Write-Verbose -Message "PhantomJS not present in $referencesPath, downloading latest version."
+
+            $jSource = 'https://bitbucket.org/ariya/phantomjs/downloads/phantomjs-2.0.0-windows.zip'
+            $jArchive = Join-Path -Path $referencesPath -ChildPath 'phantomjs.zip'
+ 
+            Invoke-WebRequest $jSource -OutFile $jArchive
+
+            Write-Verbose -Message "Expanding PhantomJS archive."
+
+            Expand-Archive -Path $jArchive -DestinationPath (Join-Path -Path $referencesPath -ChildPath '\temp-phantomjs')
+
+            Write-Verbose -Message "Copying component files to permenant location."
+            $phantomJSPath = Join-Path -Path $referencesPath -ChildPath 'PhantomJS\'
+
+            if (!(Test-Path -Path $phantomJSPath)) {
+                New-Item -ItemType Directory -Path $phantomJSPath | Out-Null
+            }
+            Copy-Item -Path (Join-Path -Path $referencesPath -ChildPath '\temp-phantomjs\phantomjs-2.0.0-windows\bin\*') -Destination $phantomJSPath
+
+            Remove-Item -Path $JArchive
+            Remove-Item -Path (Join-Path -Path $referencesPath -ChildPath '\temp-phantomjs') -Recurse -Force
+        }
+    } -ArgumentList @(,$referencesPath) | Out-Null
+
+    Wait-Job -Name Selenium -Timeout 180 | Out-Null
+    Get-Job -Name Selenium | Remove-Job
+
+    Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\Selenium.WebDriverBackedSelenium.dll')
+    Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\ThoughtWorks.Selenium.Core.dll')
+    Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\WebDriver.dll')
+    Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\WebDriver.Support.dll')
+    
+    Wait-Job -Name PhantomJS -Timeout 180 | Out-Null
+    Get-Job -Name PhantomJS | Remove-Job
+
+    $service = [OpenQA.Selenium.PhantomJS.PhantomJSDriverService]::CreateDefaultService((Join-Path -Path $referencesPath -ChildPath '\PhantomJS\'))
+    $service.HideCommandPromptWindow = $true
+    
+    $Global:driver = New-Object OpenQA.Selenium.PhantomJS.PhantomJSDriver -ArgumentList @(,$service)
+    
+    $email = ''
+    
+    $pass = ''
+    
+    $Global:driver.Navigate().GoToUrl('https://www.livecoding.tv/accounts/login/')
+    
+    $userNameField = $Global:driver.FindElementById('id_login')
+    $passwordField = $Global:driver.FindElementById('id_password')
+    $buttons = $Global:driver.FindElementsByTagName('button')
+    
+    foreach ($button in $buttons) {
+        if ($button.Text -eq 'Login') {
+            $loginButton = $button
+        }
+    }
+    
+    $userNameField.SendKeys(($email | Unprotect-CmsMessage))
+    $passwordField.SendKeys(($pass | Unprotect-CmsMessage))
+    $loginButton.Click()
+    
+    $Global:driver.Navigate().GoToUrl('https://www.livecoding.tv/chat/windos/')
+    
+    $Global:viewersGreeted = @()
 }
-
-$userNameField.SendKeys(($email | Unprotect-CmsMessage))
-$passwordField.SendKeys(($pass | Unprotect-CmsMessage))
-$loginButton.Click()
-
-$Global:driver.Navigate().GoToUrl('https://www.livecoding.tv/chat/windos/')
-
-$Global:viewersGreeted = @()
 
 function Out-Stream {
 <#
@@ -134,12 +217,17 @@ function Greet-StreamViewers {
 }
 
 function Greet-Loop {
-    $Host.UI.RawUI.WindowTitle = 'PowerBot'
-    $Host.Ui.RawUI.BackgroundColor = 'Red'
-    $Host.Ui.RawUI.ForegroundColor = 'Black'
-
-    While ($true) {
-        Greet-StreamViewers
-        Start-Sleep -Seconds 10
+    Start-Job -Name 'Greeter' -ScriptBlock {
+        try {
+            . 'C:\GitHub\powershell-depot\livecoding.tv\PowerBot.ps1'
+            Initialize-PowerBot
+            While ($true) {
+                Greet-StreamViewers
+                Start-Sleep -Seconds 1
+            }
+        } catch {
+        } finally {
+            $driver.Quit()
+        }
     }
 }
