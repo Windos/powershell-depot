@@ -321,6 +321,34 @@ function Start-Raffle {
 #     }
 # }
 
+function Send-PBHelp {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param ()
+
+    $userMessages = Read-Stream
+    $linkLimit = (Get-Date).AddHours(-1)
+
+    if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
+        foreach ($userMessage in $userMessages) {
+            if ($userMessage.Message -eq '!help') {
+                Out-Stream $Global:PBCommands.Keys
+                $Global:lastTwitterLink = Get-Date
+            }
+        }
+    }
+}
+
 function Add-PBCommand {
 <#
     .Synopsis
@@ -389,7 +417,7 @@ function Start-PBLoop {
             Initialize-PowerBot
             While ($true) {
                 Greet-StreamViewers
-                Check-PBCommand
+                # Check-PBCommand
                 Start-Sleep -Seconds 1
             }
         } catch {
