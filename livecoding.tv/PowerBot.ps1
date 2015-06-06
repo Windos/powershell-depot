@@ -116,8 +116,40 @@
     $Global:newViewers = @{}
     $Global:activeChatter = @()
     $Global:lastTwitterLink = $null
-    $Global:PBCommands = @{'!twitter' = 'Follow Windos on Twitter! https://twitter.com/WindosNZ';
+    $Global:PBCommands = @{'!help' = '';
+                           '!twitter' = 'Follow Windos on Twitter! https://twitter.com/WindosNZ';
                            '!microsoft' = 'Windos doesn''t work for Microsoft'}
+    $Global:ChatLog = 'C:\GitHub\powershell-depot\livecoding.tv\chatlog.csv'
+    $Global:LastPowerBotMessage = $null
+    $Global:MemLog = @()
+
+    $existingChat = Import-Csv -Path $Global:ChatLog
+    foreach ($msg in $existingChat) {
+        $properties = @{'UserName'=$msg.User;
+                        'Message'=$msg.Message}
+        $Result = New-Object -TypeName psobject -Property $properties
+        $Global:MemLog += $Result
+    }
+
+    $Stoploop = $false
+    [int]$Retrycount = "0"
+     
+    do {
+    	try {
+    		$Global:textBox = $Global:driver.FindElementById('message-textarea')
+            $Global:sendButton = $Global:driver.FindElementByClassName('submit')
+    		$Stoploop = $true
+    	}
+    	catch {
+    		if ($Retrycount -gt 5){
+    			$Stoploop = $true
+    		}
+    		else {
+    			Start-Sleep -Seconds 10
+    			$Retrycount = $Retrycount + 1
+    		}
+    	}
+    } While ($Stoploop -eq $false)
 }
 
 function Out-Stream {
@@ -142,15 +174,19 @@ function Out-Stream {
         [string[]] $Message
     )
 
-    Begin {
-        $textBox = $Global:driver.FindElementById('message-textarea')
-        $sendButton = $Global:driver.FindElementByClassName('submit')
-    }
+    Begin {}
 
     Process {
         foreach ($output in $Message) {
-            $textBox.SendKeys($output)
-            $sendButton.Click()
+            $Global:textBox.SendKeys($output)
+            $Global:sendButton.Click()
+
+            $pbMessage = New-Object -TypeName PSCustomObject -property @{'Time'=Get-Date;
+                                                                         'User'='PowerBot';
+                                                                         'Message'=$output
+            }
+            $Global:LastPowerBotMessage = $pbMessage
+            # Make this persistent later (save to disk...)
         }
     }
 
@@ -170,24 +206,67 @@ function Read-Stream {
 #>
     [CmdletBinding()]
     [Alias()]
-    Param ()
+    Param (
+        [switch] $all
+    )
 
     $chatMessages = $Global:driver.FindElementsByClassName('lctv-premium')
 
+    $log = @()
     foreach ($chatMessage in $chatMessages) {
         $parts = ($chatMessage.GetAttribute('innerHTML')).Split('>')
         $username = $parts[1].Replace('</a', '')
 
-        #if ($username -ne 'Windos' -and $username -ne 'PowerBot') {
-        if ($username -ne 'PowerBot') {
-            $messageText = $parts[2]
+        $messageText = $parts[2]
 
-            $properties = @{'UserName'=$username;
-                            'Message'=$messageText}
+        $properties = @{'UserName'=$username;
+                        'Message'=$messageText}
+        $Result = New-Object -TypeName psobject -Property $properties
+        $log += $Result
+    }
+
+    if ($all) {
+        $log
+    } else {
+        $difference = Compare-Object -ReferenceObject $Global:MemLog -DifferenceObject $log -Property 'UserName', 'Message' | where sideindicator -eq '=>'
+        foreach ($newMessage in $difference) {
+            Log-Chat -ChatMessage $newMessage
+        }
+        $Global:MemLog = @()
+
+        $existingChat = Import-Csv -Path $Global:ChatLog
+        foreach ($msg in $existingChat) {
+            $properties = @{'UserName'=$msg.User;
+                            'Message'=$msg.Message}
             $Result = New-Object -TypeName psobject -Property $properties
-            $Result
+            $Global:MemLog += $Result
         }
     }
+}
+
+function Log-Chat {
+<#
+    .Synopsis
+    Short description
+    .DESCRIPTION
+    Long description
+    .EXAMPLE
+    Example of how to use this cmdlet
+    .EXAMPLE
+    Another example of how to use this cmdlet
+#>
+    [CmdletBinding()]
+    [Alias()]
+    Param (
+        [psobject] $ChatMessage
+    )
+
+    $result = New-Object -TypeName PSCustomObject -property @{'Time'=Get-Date;
+                                                              'User'=$ChatMessage.Username;
+                                                              'Message'=$ChatMessage.Message
+    }
+
+    $result | Export-Csv -Path $Global:ChatLog -Append
 }
 
 function Get-StreamViewers {
@@ -293,34 +372,6 @@ function Start-Raffle {
     $uniqueUsers
 }
 
-# function Send-TwitterLink {
-# <#
-#     .Synopsis
-#     Short description
-#     .DESCRIPTION
-#     Long description
-#     .EXAMPLE
-#     Example of how to use this cmdlet
-#     .EXAMPLE
-#     Another example of how to use this cmdlet
-# #>
-#     [CmdletBinding()]
-#     [Alias()]
-#     Param ()
-# 
-#     $userMessages = Read-Stream
-#     $linkLimit = (Get-Date).AddHours(-1)
-# 
-#     if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
-#         foreach ($userMessage in $userMessages) {
-#             if ($userMessage.Message -eq '!twitter') {
-#                 Out-Stream 'Follow Windos on Twitter! https://twitter.com/WindosNZ'
-#                 $Global:lastTwitterLink = Get-Date
-#             }
-#         }
-#     }
-# }
-
 function Send-PBHelp {
 <#
     .Synopsis
@@ -336,17 +387,14 @@ function Send-PBHelp {
     [Alias()]
     Param ()
 
-    $userMessages = Read-Stream
-    $linkLimit = (Get-Date).AddHours(-1)
-
-    if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
-        foreach ($userMessage in $userMessages) {
-            if ($userMessage.Message -eq '!help') {
-                Out-Stream $Global:PBCommands.Keys
-                $Global:lastTwitterLink = Get-Date
-            }
-        }
+    $userMessages = Read-Stream -all
+    $outHelp = 'Available Commands: '
+    $commands = $Global:PBCommands.GetEnumerator()
+    foreach ($command in $commands) {
+        $outHelp += "$($command.Name), "
     }
+    $outHelp = $outHelp.Trim().TrimEnd(',')
+    $outHelp | Out-Stream
 }
 
 function Add-PBCommand {
@@ -397,14 +445,48 @@ function Check-PBCommand {
     [Alias()]
     Param ()
 
-    $userMessages = Read-Stream
-    $linkLimit = (Get-Date).AddHours(-1)
+    $fullLog = import-csv -Path $Global:ChatLog
+    $delay = (Get-Date).AddMinutes(-60)
+    $helpDelay = (Get-Date).AddMinutes(-30)
+    $active = (Get-Date).AddSeconds(-15)
+    $cmds = $Global:PBCommands.GetEnumerator()
 
-    if ($Global:lastTwitterLink -eq $null -or $Global:lastTwitterLink -le $linkLimit) {
-        foreach ($userMessage in $userMessages) {
-            if ($Global:PBCommands.ContainsKey($userMessage.Message)) {
-                $Global:PBCommands.($userMessage.Message) | Out-Stream
-                $Global:lastTwitterLink = Get-Date
+    $commandRequests = $fullLog | Where-Object -FilterScript {$_.Message -like "!*"}
+    foreach ($commandRequest in $commandRequests) {
+        if ($commandRequest.Message -in $Global:PBCommands.Keys) {
+            if ((Get-Date $commandRequest.Time) -gt $active) {
+                $recentResponse = $false
+                if ($commandRequest.Message -eq '!help') {
+                    $commandResponses = $fullLog | Where-Object -FilterScript {$_.Message -like "Available Commands: *" -and $_.User -eq 'PowerBot'}
+                    foreach ($commandResponse in $commandResponses) {
+                        $responseTime = Get-Date $commandResponse.Time
+                        if ($responseTime -gt $helpDelay) {
+                            $recentResponse = $true
+                        }
+                    }
+                    if (!$recentResponse) {
+                        Send-PBHelp
+                        Start-Sleep -Seconds 0.5
+                    }
+                } else {
+                    $commandOutput = $Global:PBCommands.($commandRequest.Message)
+                    $testString = $commandOutput
+                    if ($commandOutput -like "*twitter*") {
+                        $testString = $testString.Replace(' https://twitter.com/WindosNZ','')
+                    }
+                    $commandResponses = $fullLog | Where-Object -FilterScript {$_.Message -like "$testString*" -and $_.User -eq 'PowerBot'}
+
+                    foreach ($commandResponse in $commandResponses) {
+                        $responseTime = Get-Date $commandResponse.Time
+                        if ($responseTime -gt $delay) {
+                            $recentResponse = $true
+                        }
+                    }
+                    if (!$recentResponse) {
+                        Out-Stream -Message $commandOutput
+                        Start-Sleep -Seconds 0.5
+                    }
+                }
             }
         }
     }
@@ -415,9 +497,11 @@ function Start-PBLoop {
         try {
             . 'C:\GitHub\powershell-depot\livecoding.tv\PowerBot.ps1'
             Initialize-PowerBot
+            Out-Stream 'PowerBot: Online'
             While ($true) {
                 Greet-StreamViewers
-                # Check-PBCommand
+                Read-Stream
+                Check-PBCommand
                 Start-Sleep -Seconds 1
             }
         } catch {
