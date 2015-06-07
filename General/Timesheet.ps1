@@ -47,3 +47,8 @@ function New-TSReport {
         }
     }
 }
+
+while ($true) {
+    New-TSEntry
+    Start-Sleep -Seconds 3600
+}
