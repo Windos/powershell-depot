@@ -2,9 +2,8 @@
 
 <#ToDo:
  * Greeter:
-   * Don't regreet if PowerBot restarted
-   * If left running 24/7, regret after x hours (i.e. for next stream)
    * Reset greet delay if viewer leaves chat (i.e. if viewer leaves before 30 seconds, don't auto greet if they re-visit later unless they stay for delay)
+   (this may be fixed, needs testing off stream)
  * Revisit dynamically adding commands, add to PBLoop.
    * Make added commands persistent.
    * Edit commands, remove commands.
@@ -106,7 +105,7 @@ function Initialize-PowerBot
     $null = Wait-Job -Name SeleniumInstall -Timeout 180
     Get-Job -Name SeleniumInstall  | Remove-Job
 
-    Add-Type -PSeleniumath (Join-Path -Path $referencesPath -ChildPath '\Selenium\Selenium.WebDriverBackedSelenium.dll')
+    Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\Selenium.WebDriverBackedSelenium.dll')
     Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\ThoughtWorks.Selenium.Core.dll')
     Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\WebDriver.dll')
     Add-Type -Path (Join-Path -Path $referencesPath -ChildPath '\Selenium\WebDriver.Support.dll')
@@ -118,10 +117,8 @@ function Initialize-PowerBot
     $phatomJsService.HideCommandPromptWindow = $true
     
     $Global:phantomJsDriver = New-Object -TypeName OpenQA.Selenium.PhantomJS.PhantomJSDriver -ArgumentList @(,$phatomJsService)
-    
-    $email = ''
-    
-    $pass = ''
+
+    PASSWORD HERE!
     
     $Global:phantomJsDriver.Navigate().GoToUrl('https://www.livecoding.tv/accounts/login/')
     
@@ -137,13 +134,31 @@ function Initialize-PowerBot
         }
     }
     
-    $userNameField.SendKeys(($email | Unprotect-CmsMessage))
-    $passwordField.SendKeys(($pass | Unprotect-CmsMessage))
+    $userNameField.SendKeys($email)
+    $passwordField.SendKeys($pass)
     $loginButton.Click()
     
     $Global:phantomJsDriver.Navigate().GoToUrl('https://www.livecoding.tv/chat/windos/')
     
     $Global:viewersGreeted = @()
+
+    if (!(Test-Path -Path 'C:\GitHub\powershell-depot\livecoding.tv\greeted.csv'))
+    {
+        $null = New-Item -Path 'C:\GitHub\powershell-depot\livecoding.tv\greeted.csv' -ItemType File
+    }
+
+    $importedGreeted = Import-Csv -Path 'C:\GitHub\powershell-depot\livecoding.tv\greeted.csv'
+
+    foreach ($previousGreet in $importedGreeted)
+    {
+        $properties = @{
+            'Name' = $previousGreet.Name
+            'whenGreeted' = (Get-Date $previousGreet.whenGreeted)
+        }
+        $Result = New-Object -TypeName psobject -Property $properties
+        $Global:viewersGreeted += $Result
+    }
+
     $Global:newViewers = @{}
     $Global:PBCommands = @{
         '!help'    = ''
@@ -155,7 +170,7 @@ function Initialize-PowerBot
 
     if (!(Test-Path -Path $Global:ChatLog))
     {
-        New-Item -Path $Global:ChatLog -ItemType File
+        $null = New-Item -Path $Global:ChatLog -ItemType File
     }
 
     $existingChat = Import-Csv -Path $Global:ChatLog
@@ -365,6 +380,7 @@ function Greet-StreamViewers
     $user = $null
     $users = Get-StreamViewers
     $testTime = (Get-Date).AddSeconds(-30)
+    $regreetTime = (Get-Date).AddHours(-13)
 
     $Greetings = @('Welcome {0}!', 
         'Hey {0}', 
@@ -382,13 +398,16 @@ function Greet-StreamViewers
         {
             $greeted = $false
             
-            foreach ($viewer in $Global:viewersGreeted) 
+            foreach ($viewer in $Global:viewersGreeted)
             {
-                Write-Verbose -Message $viewer
-                if ($user -eq $viewer) 
+                Write-Verbose -Message $viewer.Name
+                if ($user -eq $viewer.Name) 
                 {
-                    Write-Verbose -Message 'Already greeted'
-                    $greeted = $true
+                    if ($viewer.whenGreeted -ge $regreetTime)
+                    {
+                        Write-Verbose -Message 'Already greeted'
+                        $greeted = $true
+                    }
                 }
                 else 
                 {
@@ -406,14 +425,28 @@ function Greet-StreamViewers
                         $rand = $null
                         $rand = Get-Random -Minimum 0 -Maximum ($Greetings.Length - 1)
                         Out-Stream -Message ($Greetings[$rand] -f $user)
-                        $Global:viewersGreeted += $user
+
+                        $properties = @{
+                            'Name' = $user
+                            'whenGreeted' = (Get-Date)
+                        }
+                        $Result = New-Object -TypeName psobject -Property $properties
+                        $Global:viewersGreeted += $Result
+                        $Global:viewersGreeted | Export-Csv -Path 'C:\GitHub\powershell-depot\livecoding.tv\greeted.csv'
+                        $Global:newViewers.Remove($user)
                     }
                 }
-                else 
+                else
                 {
                     $Global:newViewers.Add($user,(Get-Date))
                 }
             }
+        }
+    }
+
+    foreach ($newViewer in $Global:newViewers) {
+        if ($newViewer.Keys -notin $users) {
+            $Global:newViewers.Remove($newViewer.Keys)
         }
     }
 }
