@@ -118,7 +118,9 @@ function Initialize-PowerBot
     
     $Global:phantomJsDriver = New-Object -TypeName OpenQA.Selenium.PhantomJS.PhantomJSDriver -ArgumentList @(,$phatomJsService)
 
-    PASSWORD HERE!
+    $email = ''
+    
+    $pass = ''
     
     $Global:phantomJsDriver.Navigate().GoToUrl('https://www.livecoding.tv/accounts/login/')
     
@@ -134,8 +136,8 @@ function Initialize-PowerBot
         }
     }
     
-    $userNameField.SendKeys($email)
-    $passwordField.SendKeys($pass)
+    $userNameField.SendKeys(($email | Unprotect-CmsMessage)
+    $passwordField.SendKeys(($pass | Unprotect-CmsMessage))
     $loginButton.Click()
     
     $Global:phantomJsDriver.Navigate().GoToUrl('https://www.livecoding.tv/chat/windos/')
