@@ -24,6 +24,9 @@
         [Parameter(Mandatory=$true,
             Position = 2)]
         [string[]] $Date = '2015-07-06',
+
+        [Parameter(Mandatory=$false)]
+        [switch] $Repeat,
         
         [Parameter(Mandatory=$false)]
         [string] $Difficuilty = 'beginner',
@@ -47,8 +50,7 @@
         Add-Type -Path (Join-Path -Path $Path -ChildPath '\Selenium\WebDriver.dll')
         Add-Type -Path (Join-Path -Path $Path -ChildPath '\Selenium\WebDriver.Support.dll')
         
-        #$Browser = New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver -ArgumentList @(,(Join-Path -Path $Path -ChildPath '\Chrome\'))
-        $Browser = New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver -ArgumentList @(,'C:\Program Files (x86)\Google\Chrome\Application\')
+        $Browser = New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver -ArgumentList @(,(Join-Path -Path $Path -ChildPath '\Chrome\'))
         
         $Browser.Navigate().GoToUrl('https://www.livecoding.tv/accounts/login/')
         Start-Sleep -Seconds 90
@@ -66,6 +68,16 @@
         $TitleTextBox = $Browser.FindElementById('id_title')
         $TitleTextBox.SendKeys($Title)
         
+        $RepeatCheckBox = $Browser.FindElementById('id_is_recurring')
+
+        if (!$Repeat -and $RepeatCheckBox.Selected)
+        {
+            $RepeatCheckBox.Click()
+        }
+        elseif ($Repeat -and !$RepeatCheckBox.Selected())
+        {
+            $RepeatCheckBox.Click()
+        }
         
         $DifficuiltyDropDown = $Browser.FindElementById('s2id_id_coding_difficulty')
         $DifficuiltyDropDown.Click()
