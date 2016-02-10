@@ -126,7 +126,7 @@ foreach ($Candidate in $Old) {
 
 foreach ($Manager in $Report.Keys)
 {
-    if ($Manager -eq $NetInfDN)
+    if ($Manager -eq $OperationsDN)
     {
         $AdObject = Get-ADUser -Identity $Manager -Properties Description, EmailAddress
 
