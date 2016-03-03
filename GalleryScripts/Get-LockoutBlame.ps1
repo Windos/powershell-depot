@@ -11,6 +11,9 @@
     (c) 2016 Joshua (Windos) King. All rights reserved.
 .TAGS
     ActiveDirectory
+.PROJECTURI
+    https://github.com/Windos/powershell-depot/tree/master/GalleryScripts
+.RELEASENOTES
 #>
 
 <#
@@ -20,8 +23,7 @@ Gets a Windows Event about Locked Accounts.
 .DESCRIPTION
 Script to get a Windows Event about Locked Accounts, including the host which caused the lockout.
 
-By default only events triggered in the last hour are returned, but a different time frame can be provided with the
-PastHours parameter or overridden with the All switch.
+By default only events triggered in the last hour are returned, but a different time frame can be provided with the PastHours parameter or overridden with the All switch.
 
 .EXAMPLE
 Get-LockoutBlame
@@ -49,8 +51,7 @@ Get-LockoutBlame -UserName johnd -All
 Returns all account lockout events for the user johnd present in the event log.
 
 .NOTES
-The default value for the ComputerName parameter uses a cmdlet from the ActiveDirectory module, if you don't have 
-this installed (why?) you can either provide a domain controller at runtime or hardcode it as the default.
+The default value for the ComputerName parameter uses a cmdlet from the ActiveDirectory module, if you don't have this installed (why?) you can either provide a domain controller at runtime or hardcode it as the default.
 #>
 
 [CmdletBinding(DefaultParameterSetName='Filtered')]
