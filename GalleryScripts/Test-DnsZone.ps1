@@ -18,7 +18,6 @@
 #>
 
 #Requires -Module PoshRSJob
-#Requires -Module DnsServer
 
 <#
 .SYNOPSIS
@@ -65,7 +64,15 @@ $ScriptBlock = {
 }
 
 Import-Module -Name PoshRSJob
-Import-Module -Name DnsServer
+
+try
+{
+    Import-Module -Name DnsServer
+}
+catch
+{
+    throw 'Unable to load module ''DnsServer''. Please ensure you have installed and enabled the Remote Server Administation Tools (RSAT).'
+}
 
 $Records = Get-DnsServerResourceRecord -ComputerName $ComputerName -ZoneName $ZoneName | Where { $_.Type -in 1,5 }
 $Batch = "DnsTest-$(New-Guid)"
