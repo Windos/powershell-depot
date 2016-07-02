@@ -7,7 +7,7 @@
     
         if ($PlexStatus.MediaContainer.Size -eq 0)
         {
-            Stop-Computer
+            Invoke-Expression -Command 'shutdown -s -t 0'
         }
     
         Start-Sleep -Seconds 900
