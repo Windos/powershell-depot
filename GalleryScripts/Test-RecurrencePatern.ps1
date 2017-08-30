@@ -5,6 +5,8 @@
     e44a66c3-92cb-41f0-846b-43c74bb1ef75
 .AUTHOR
     Joshua (Windos) King
+.DESCRIPTION
+	Tests a recurrence pattern against the current date.
 .COMPANYNAME
     king.geek.nz
 .COPYRIGHT
