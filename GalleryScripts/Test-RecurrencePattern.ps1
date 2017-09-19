@@ -1,6 +1,6 @@
 <#PSScriptInfo
 .VERSION
-    0.1.0
+    0.1.1
 .GUID
     e44a66c3-92cb-41f0-846b-43c74bb1ef75
 .AUTHOR
@@ -16,16 +16,18 @@
 .PROJECTURI
     https://github.com/Windos/powershell-depot/tree/master/GalleryScripts
 .RELEASENOTES
+0.1.1:
+* Mixed misspelling: Patern -> Pattern
 0.1.0:
 * Initial release
 #>
 
-function Test-RecurrencePatern {
+function Test-RecurrencePattern {
     <#
     .SYNOPSIS
         Tests a recurrence pattern against the current date.
     .DESCRIPTION
-        The Test-RecurrencePatern function tests a recurrence pattern against the current date.
+        The Test-RecurrencePattern function tests a recurrence pattern against the current date.
 
         Given a specified day of the week, via the Day parameter, and an Instance, this function will provide a
         boolean value depending on whether the current date falls within the recurrence pattern.
