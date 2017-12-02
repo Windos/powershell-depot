@@ -30,6 +30,8 @@ function Add-KKParticipant {
             Name = $Name
             Email = $Email
             Snitch = $Snitch
+            Paired = $false
+            SortKey = [System.Random]::new().Next(1, 1000)
         }
         $null = $Script:Participants.Add($Obj)
     } else {

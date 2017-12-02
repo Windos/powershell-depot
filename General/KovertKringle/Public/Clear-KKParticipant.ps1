@@ -1,4 +1,4 @@
-function Get-KKParticipant {
+function Clear-KKParticipant {
     <#
     .SYNOPSIS
     Short description
@@ -13,5 +13,5 @@ function Get-KKParticipant {
     General notes
     #>
 
-    $Script:Participants
+    $Script:Participants.Clear()
 }

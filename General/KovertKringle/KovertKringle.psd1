@@ -8,8 +8,11 @@
     Description = 'PowerShell module for organizing Secret Santa pairings.'
     PowerShellVersion = '3.0'
     FunctionsToExport = 'Add-KKParticipant',
+                        'Clear-KKParticipant',
+                        'Get-KKPairing',
                         'Get-KKParticipant',
-                        'Remove-KKParticipant'
+                        'Remove-KKParticipant',
+                        'Start-KKPairing'
     CmdletsToExport = @()
     AliasesToExport = @()
     PrivateData = @{

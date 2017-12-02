@@ -14,5 +14,6 @@ Foreach($Import in @($Public + $Private))
 }
 
 $Script:Participants = [System.Collections.ArrayList]::new()
+$Script:Pairings = [System.Collections.ArrayList]::new()
 
 Export-ModuleMember -Function $Public.Basename
