@@ -7,7 +7,9 @@
     Copyright = '(c) 2017 Joshua (Windos) King. All rights reserved.'
     Description = 'PowerShell module for organizing Secret Santa pairings.'
     PowerShellVersion = '3.0'
-    FunctionsToExport = ''
+    FunctionsToExport = 'Add-KKParticipant',
+                        'Get-KKParticipant',
+                        'Remove-KKParticipant'
     CmdletsToExport = @()
     AliasesToExport = @()
     PrivateData = @{
