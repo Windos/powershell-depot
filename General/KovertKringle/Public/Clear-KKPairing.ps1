@@ -1,4 +1,4 @@
-function Get-KKPairing {
+function Clear-KKPairing {
     <#
     .SYNOPSIS
     Short description
@@ -13,5 +13,9 @@ function Get-KKPairing {
     General notes
     #>
 
-    $Script:Pairings
+    $Script:Pairings.Clear()
+
+    foreach ($Person in $Script:Participants) {
+        $Person.Paired = $false
+    }
 }

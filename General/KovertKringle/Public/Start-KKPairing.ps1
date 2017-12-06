@@ -29,6 +29,8 @@ function Start-KKPairing {
             $Giftee.Paired = $true
         } else {
             Write-Error 'No possible pairings, you may have already run this function.'
+            break
         }
+        Start-Sleep -Milliseconds 10
     }
 }
