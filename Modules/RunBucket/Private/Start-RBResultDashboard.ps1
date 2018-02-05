@@ -31,7 +31,13 @@ function Start-RBResultDashboard {
                     }
                 }
                 New-UDColumn -Size 4 {
-                    New-UDCounter -Title 'Difference' -Format '(0.00 %)' -Icon 'percent' -TextAlignment center -BackgroundColor '#252525' -FontColor "#FFFFFF" -Endpoint {
+                    if ($Difference.Minimum -lt 0) {
+                        $BgColour = '#006400'
+                    } else {
+                        $BgColour = '#8B0000'
+                    }
+
+                    New-UDCounter -Title 'Difference' -Format '0.00 %' -Icon 'percent' -TextAlignment center -BackgroundColor $BgColour -FontColor "#FFFFFF" -Endpoint {
                         $Difference.Minimum | ConvertTo-Json
                     }
                 }
@@ -48,7 +54,13 @@ function Start-RBResultDashboard {
                     }
                 }
                 New-UDColumn -Size 4 {
-                    New-UDCounter -Title 'Difference' -Format '(0.00 %)' -Icon 'percent' -TextAlignment center -BackgroundColor '#252525' -FontColor "#FFFFFF" -Endpoint {
+                    if ($Difference.Maximum -lt 0) {
+                        $BgColour = '#006400'
+                    } else {
+                        $BgColour = '#8B0000'
+                    }
+
+                    New-UDCounter -Title 'Difference' -Format '0.00 %' -Icon 'percent' -TextAlignment center -BackgroundColor $BgColour -FontColor "#FFFFFF" -Endpoint {
                         $Difference.Maximum | ConvertTo-Json
                     }
                 }
@@ -65,7 +77,13 @@ function Start-RBResultDashboard {
                     }
                 }
                 New-UDColumn -Size 4 {
-                    New-UDCounter -Title 'Difference' -Format '(0.00 %)' -Icon 'percent' -TextAlignment center -BackgroundColor '#252525' -FontColor "#FFFFFF" -Endpoint {
+                    if ($Difference.Average -lt 0) {
+                        $BgColour = '#006400'
+                    } else {
+                        $BgColour = '#8B0000'
+                    }
+
+                    New-UDCounter -Title 'Difference' -Format '0.00 %' -Icon 'percent' -TextAlignment center -BackgroundColor $BgColour -FontColor "#FFFFFF" -Endpoint {
                         $Difference.Average | ConvertTo-Json
                     }
                 }
