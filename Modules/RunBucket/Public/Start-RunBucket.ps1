@@ -1,5 +1,5 @@
 function Start-RunBucket {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'scriptblock')]
 
     param (
         [Parameter(Mandatory,
@@ -24,4 +24,30 @@ function Start-RunBucket {
         [ValidateScript({Test-Path -Path $_})]
         [string] $VariationPath
     )
+
+    $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
+    $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
+
+    $Minimum = ($ControlResult.Minimum - $VariationResult.Minimum) / $ControlResult.Minimum
+    $Maximum = ($ControlResult.Maximum - $VariationResult.Maximum) / $ControlResult.Maximum
+    $Average = ($ControlResult.Average - $VariationResult.Average) / $ControlResult.Average
+
+    [PSCustomObject] @{
+        Minimum = $Minimum
+        Maximum = $Maximum
+        Average = $Average
+    }
+
+    $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
+    $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
+    
+    $Minimum = ($ControlResult.Minimum - $VariationResult.Minimum) / $ControlResult.Minimum
+    $Maximum = ($ControlResult.Maximum - $VariationResult.Maximum) / $ControlResult.Maximum
+    $Average = ($ControlResult.Average - $VariationResult.Average) / $ControlResult.Average
+
+    [PSCustomObject] @{
+        Minimum = $Minimum
+        Maximum = $Maximum
+        Average = $Average
+    }
 }

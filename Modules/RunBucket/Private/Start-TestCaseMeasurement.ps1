@@ -46,16 +46,19 @@ function Start-TestCaseMeasurement {
     )
 
     $JobBlock = {
-        $Measurement = Measure-Command -Expression {$_.Script}
+        $StopWatch = [System.Diagnostics.Stopwatch]::StartNew()
+        & $_.Script
+        $StopWatch.Stop()
         [PSCustomObject] @{
             Iteration = $_.Iteration
-            RunTime = $Measurement.TotalMilliseconds
+            RunTime = $StopWatch.Elapsed.TotalMilliseconds
         }
     }
 
-    $Result = (1..$Iterations | foreach {[PSCustomObject] @{Iteration = $_; Script = $ScriptBlock}} |
+    $RunTime = (1..$Iterations | foreach {[PSCustomObject] @{Iteration = $_; Script = $ScriptBlock}} |
         Start-RSJob -ScriptBlock $JobBlock -Name {$_.Iteration} -Throttle $Throttle |
-        Wait-RSJob -ShowProgress | Receive-RSJob).RunTime | Measure -Average -Maximum -Minimum
+        Wait-RSJob -ShowProgress | Receive-RSJob).RunTime | Sort-Object
+    $Result = $RunTime[1..($RunTime.Length-2)] | Measure -Average -Maximum -Minimum
 
     [PSCustomObject] @{
         Minimum = $Result.Minimum
