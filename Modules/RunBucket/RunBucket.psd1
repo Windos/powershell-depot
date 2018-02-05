@@ -7,6 +7,7 @@
     Copyright = '(c) 2018 Joshua (Windos) King. All rights reserved.'
     Description = "Module for A/B testing, also known as Bucket or Split-Run testing."
     PowerShellVersion = '5.1'
+    RequiredModules = @('PoshRSJob')
     FunctionsToExport = ''
     CmdletsToExport = @()
     AliasesToExport = @()

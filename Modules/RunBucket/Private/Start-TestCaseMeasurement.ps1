@@ -1,4 +1,3 @@
-#Requires -Module PoshRSJob
 function Start-TestCaseMeasurement {
     <#
     .SYNOPSIS
