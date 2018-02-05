@@ -15,7 +15,7 @@
             Tags = @('Testing', 'Utility')
             LicenseUri = 'https://github.com/Windos/powershell-depot/blob/master/LICENSE.md'
             ProjectUri = 'https://github.com/Windos/powershell-depot/tree/master/Modules/RunBucket'
-            IconUri = ''
+            IconUri = 'https://raw.githubusercontent.com/Windos/powershell-depot/81c9ad30/Modules/RunBucket/Media/fire-fighter-294192_640.png'
             ReleaseNotes = '
 * Initial release
 '
