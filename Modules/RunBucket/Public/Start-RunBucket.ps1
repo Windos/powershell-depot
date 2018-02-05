@@ -26,21 +26,9 @@ function Start-RunBucket {
     )
 
     $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
+    Start-Sleep -Milliseconds 50
     $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
 
-    $Minimum = ($ControlResult.Minimum - $VariationResult.Minimum) / $ControlResult.Minimum
-    $Maximum = ($ControlResult.Maximum - $VariationResult.Maximum) / $ControlResult.Maximum
-    $Average = ($ControlResult.Average - $VariationResult.Average) / $ControlResult.Average
-
-    [PSCustomObject] @{
-        Minimum = $Minimum
-        Maximum = $Maximum
-        Average = $Average
-    }
-
-    $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
-    $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
-    
     $Minimum = ($ControlResult.Minimum - $VariationResult.Minimum) / $ControlResult.Minimum
     $Maximum = ($ControlResult.Maximum - $VariationResult.Maximum) / $ControlResult.Maximum
     $Average = ($ControlResult.Average - $VariationResult.Average) / $ControlResult.Average
