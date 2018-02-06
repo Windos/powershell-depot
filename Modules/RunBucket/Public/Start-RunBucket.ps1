@@ -9,8 +9,6 @@ function Start-RunBucket {
         [scriptblock] $Variation
     )
 
-    Get-UDDashboard -Name 'RunBucketResults' | Stop-UDDashboard
-
     $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
     Start-Sleep -Milliseconds 50
     $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
