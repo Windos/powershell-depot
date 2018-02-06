@@ -12,7 +12,7 @@ function Start-RBResultDashboard {
         [PSCustomObject] $Difference
     )
 
-    Start-UDDashboard -Wait -Content {
+    Start-UDDashboard -Name 'RunBucketResults' -Content {
         New-UDDashboard -Title 'RunBucket Test Results' -NavBarColor '#FF1c1c1c' -NavBarFontColor "#FF55b3ff" -BackgroundColor "#FF333333" -FontColor "#FFFFFF" -Content {
             New-UDRow {
                 if ($Difference.Average -lt 0) {
