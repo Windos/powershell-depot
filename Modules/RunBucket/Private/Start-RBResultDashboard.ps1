@@ -4,18 +4,13 @@ function Start-RBResultDashboard {
     param (
         [Parameter(Mandatory)]
         [PSCustomObject] $ControlResult,
-        
+
         [Parameter(Mandatory)]
         [PSCustomObject] $VariationResult,
 
         [Parameter(Mandatory)]
         [PSCustomObject] $Difference
     )
-
-    $Colors = @{
-        BackgroundColor = "#FF252525"
-        FontColor = "#FFFFFFFF"
-    }
 
     Start-UDDashboard -Wait -Content {
         New-UDDashboard -Title 'RunBucket Test Results' -NavBarColor '#FF1c1c1c' -NavBarFontColor "#FF55b3ff" -BackgroundColor "#FF333333" -FontColor "#FFFFFF" -Content {

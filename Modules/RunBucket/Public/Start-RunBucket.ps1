@@ -1,28 +1,12 @@
 function Start-RunBucket {
-    [CmdletBinding(DefaultParameterSetName = 'scriptblock')]
+    [CmdletBinding()]
 
     param (
-        [Parameter(Mandatory,
-                   Position = 0,
-                   ParameterSetName = 'scriptblock')]
+        [Parameter(Mandatory)]
         [scriptblock] $Control,
 
-        [Parameter(Mandatory,
-                   Position = 1,
-                   ParameterSetName = 'scriptblock')]
-        [scriptblock] $Variation,
-
-        [Parameter(Mandatory,
-                   Position = 0,
-                   ParameterSetName = 'file')]
-        [ValidateScript({Test-Path -Path $_})]
-        [string] $ControlPath,
-
-        [Parameter(Mandatory,
-                   Position = 1,
-                   ParameterSetName = 'file')]
-        [ValidateScript({Test-Path -Path $_})]
-        [string] $VariationPath
+        [Parameter(Mandatory)]
+        [scriptblock] $Variation
     )
 
     $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
