@@ -108,7 +108,7 @@ function Start-RBResultDashboard {
     $ResultsDashboard = Get-UDDashboard
 
     if ($ResultsDashboard) {
-        $ResultsDashboard | Stop-UDDashboard -ErrorAction SilentlyContinue
+        $ResultsDashboard | Stop-UDDashboard
     }
 
     $null = Start-UDDashboard -Content $Dashboard
