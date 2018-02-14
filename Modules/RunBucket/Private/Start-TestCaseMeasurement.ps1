@@ -47,7 +47,7 @@ function Start-TestCaseMeasurement {
 
     $JobBlock = {
         $StopWatch = [System.Diagnostics.Stopwatch]::StartNew()
-        & $_.Script
+        Invoke-Command $_.Script
         $StopWatch.Stop()
         [PSCustomObject] @{
             Iteration = $_.Iteration
