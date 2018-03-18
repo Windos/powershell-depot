@@ -6,7 +6,10 @@ function Start-RunBucket {
         [scriptblock] $Control,
 
         [Parameter(Mandatory)]
-        [scriptblock] $Variation
+        [scriptblock] $Variation,
+
+        [Parameter()]
+        [string] $Title
     )
 
     $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
@@ -19,5 +22,15 @@ function Start-RunBucket {
         Average = Measure-RBDifference -Control $ControlResult.Average -Variation $VariationResult.Average
     }
 
-    Start-RBResultDashboard -ControlResult $ControlResult -VariationResult $VariationResult -Difference $Difference
+    $Params = @{
+        ControlResult = $ControlResult
+        VariationResult = $VariationResult
+        Difference = $Difference
+    }
+
+    if ($Title) {
+        $Params.Add('Title', $Title)
+    }
+
+    Start-RBResultDashboard @Params
 }

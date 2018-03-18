@@ -9,11 +9,20 @@ function Start-RBResultDashboard {
         [PSCustomObject] $VariationResult,
 
         [Parameter(Mandatory)]
-        [PSCustomObject] $Difference
+        [PSCustomObject] $Difference,
+
+        [Parameter()]
+        [string] $Title
     )
 
+    $DashTitle = 'RunBucket Test Results'
+
+    if ($Title) {
+        $DashTitle += " - $Title"
+    }
+
     $Dashboard = {
-        New-UDDashboard -Title 'RunBucket Test Results' -NavBarColor '#FF1c1c1c' -NavBarFontColor "#FF55b3ff" -BackgroundColor "#FF333333" -FontColor "#FFFFFF" -Content {
+        New-UDDashboard -Title $DashTitle -NavBarColor '#FF1c1c1c' -NavBarFontColor "#FF55b3ff" -BackgroundColor "#FF333333" -FontColor "#FFFFFF" -Content {
             New-UDRow {
                 if ($Difference.Average -lt 0) {
                     $ConText = "Control`r`n "
