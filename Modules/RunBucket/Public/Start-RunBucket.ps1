@@ -9,12 +9,15 @@ function Start-RunBucket {
         [scriptblock] $Variation,
 
         [Parameter()]
-        [string] $Title
+        [string] $Title,
+
+        [Parameter()]
+        [int] $Iterations = 100
     )
 
-    $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25
+    $ControlResult = Start-TestCaseMeasurement -ScriptBlock $Control -Throttle 25 -Iterations $Iterations
     Start-Sleep -Milliseconds 50
-    $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25
+    $VariationResult = Start-TestCaseMeasurement -ScriptBlock $Variation -Throttle 25 -Iterations $Iterations
 
     $Difference = [PSCustomObject] @{
         Minimum = Measure-RBDifference -Control $ControlResult.Minimum -Variation $VariationResult.Minimum
