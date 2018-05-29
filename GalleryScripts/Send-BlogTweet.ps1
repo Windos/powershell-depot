@@ -1,11 +1,17 @@
-$Uri = 'https://king.geek.nz/rss/'
+#Requires -Module PoshTwit
+
+param (
+    [string] $BlogFeed = 'https://king.geek.nz/rss/',
+    [string] $TokenPath = 'C:\Program Files\WindowsPowerShell\Modules\PoshTwit\0.1.6\token.json'
+)
+
 $Posts = [System.Collections.ArrayList]::new()
 $PageNumber = 1
 $More = $true
 
 while ($More) {
     try {
-        $Page = Invoke-RestMethod -Uri "$Uri$PageNumber" -ErrorAction Stop
+        $Page = Invoke-RestMethod -Uri "$BlogFeed$PageNumber" -ErrorAction Stop
     } catch {
         $Page = $null
     }
@@ -35,15 +41,14 @@ foreach ($Category in $Categories) {
 
 $TweetText = "From the blog archive: ""$Title""`n`n$Excerpt$Hashtags`n$link"
 
-Import-Module -Name PoshTwit
-$Token = Get-Content -Path 'C:\Program Files\WindowsPowerShell\Modules\PoshTwit\0.1.6\token.json' | ConvertFrom-Json
+$Token = Get-Content -Path $TokenPath | ConvertFrom-Json
 
 $ParamSplat = @{
-    Tweet = $TweetText
-    ConsumerKey = $Token.ConsumerKey
+    Tweet          = $TweetText
+    ConsumerKey    = $Token.ConsumerKey
     ConsumerSecret = $Token.ConsumerSecret
-    AccessToken = $Token.AccessToken
-    AccessSecret = $Token.AccessSecret
+    AccessToken    = $Token.AccessToken
+    AccessSecret   = $Token.AccessSecret
 }
 
 Publish-Tweet @ParamSplat
