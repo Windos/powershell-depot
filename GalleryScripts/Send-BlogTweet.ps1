@@ -1,5 +1,34 @@
+<#PSScriptInfo
+
+.VERSION 0.1
+
+.GUID 2b02b3ba-b43d-431b-901d-37b919005685
+
+.AUTHOR Joshua (Windos) King
+
+.COMPANYNAME king.geek.nz
+
+.COPYRIGHT (c) 2015 Joshua (Windos) King. All rights reserved.
+
+.TAGS Twitter tweet social blog
+
+.LICENSEURI https://github.com/Windos/powershell-depot/blob/master/LICENSE.md
+
+.PROJECTURI https://github.com/Windos/powershell-depot/blob/master/GalleryScripts/Send-BlogTweet.ps1
+
+.RELEASENOTES
+* Initial release
+
+#>
+
 #Requires -Module PoshTwit
 
+<#
+
+.DESCRIPTION
+Send-BlogTweet chooses a random post from a blog's RSS feed and sends a Tweet, using PoshTwit, linking to the post.
+
+#>
 param (
     [string] $BlogFeed = 'https://king.geek.nz/rss/',
     [string] $TokenPath = 'C:\Program Files\WindowsPowerShell\Modules\PoshTwit\0.1.6\token.json'
