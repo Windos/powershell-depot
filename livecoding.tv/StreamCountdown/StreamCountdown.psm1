@@ -1,4 +1,7 @@
 ﻿function Start-Stream {
+    param(
+        $countdownTime = 5
+    )
     $loading = @('Waiting for Windos to hit enter',
                  'Warming up processors', 
                  'Downloading the internet', 
@@ -24,7 +27,7 @@
                  'Perturbing Matrices')
 
     $startTime = Get-Date
-    $endTime = $startTime.AddMinutes(5)
+    $endTime = $startTime.AddMinutes($countdownTime)
     $totalSeconds = (New-TimeSpan -Start $startTime -End $endTime).TotalSeconds
 
     $totalSecondsChild = Get-Random -Minimum 4 -Maximum 30
