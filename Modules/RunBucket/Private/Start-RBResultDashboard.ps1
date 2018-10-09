@@ -121,4 +121,6 @@ function Start-RBResultDashboard {
     }
 
     $null = Start-UDDashboard -Content $Dashboard
+
+    $Global:Selenium.Navigate().Refresh()
 }
