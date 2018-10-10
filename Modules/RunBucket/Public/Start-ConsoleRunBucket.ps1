@@ -10,7 +10,7 @@ function Start-ConsoleRunBucket {
     )
 
     $RunTime = foreach ($i in 1..$Iterations) {
-        (Measure-Command $ScriptBlock).TotalMilliseconds
+        (Measure-Command $TestCase).TotalMilliseconds
     }
 
     $Result = $RunTime | Measure -Average -Maximum -Minimum
