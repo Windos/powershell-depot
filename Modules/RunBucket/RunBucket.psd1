@@ -8,7 +8,8 @@
     Description = "Module for A/B testing, also known as Bucket or Split-Run testing."
     PowerShellVersion = '5.1'
     RequiredModules = @('PoshRSJob', 'UniversalDashboard','BurntToast')
-    FunctionsToExport = 'Start-RunBucket'
+    FunctionsToExport = 'Start-RunBucket',
+                        'Start-ConsoleRunBucket'
     CmdletsToExport = @()
     AliasesToExport = @()
     PrivateData = @{
