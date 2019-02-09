@@ -6,7 +6,7 @@ $Endpoint = New-UDEndpoint -Url "/toast" -Method "POST" -Endpoint {
 
     $ShortCommitSha = $Commit.Substring(0,7)
     $Button = New-BTButton -Content 'Open' -Arguments "https://dev.azure.com/windosnz/CrashTest/_build/results?buildId=$BuildId"
-    New-BurntToastNotification -Text "$Project build $Build $Status", "Source: $ShortCommitSha", "Branch $Branch"  -AppLogo 'https://avatars2.githubusercontent.com/u/39924718?s=460&v=4' -Button $Button
+    New-BurntToastNotification -Text "$Project $Build - $Status", "Source: $ShortCommitSha", "Branch: $Branch"  -AppLogo 'https://avatars2.githubusercontent.com/u/39924718?s=460&v=4' -Button $Button
 }
 $Api = Start-UDRestApi -AuthenticationMethod $Method -Endpoint $Endpoint -Port 8888
 
