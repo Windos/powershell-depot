@@ -11,17 +11,19 @@ $Endpoint = New-UDEndpoint -Url "/toast" -Method "POST" -Endpoint {
     }
 
     $ShortCommitSha = $Commit.Substring(0,7)
-    $Button = New-BTButton -Content 'Open' -Arguments "https://dev.azure.com/windosnz/CrashTest/_build/results?buildId=$BuildId"
+    $Button = New-BTButton -Content 'Open' -Arguments "https://dev.azure.com/windosnz/$Project/_build/results?buildId=$BuildId"
     New-BurntToastNotification -Text "$Project $Build - $Status", "Source: $ShortCommitSha", "Branch: $Branch"  -AppLogo $Icon -Button $Button
 }
 $Api = Start-UDRestApi -AuthenticationMethod $Method -Endpoint $Endpoint -Port 8888
 
 $Body = @{
     Build = 'Random'
-    Result = 'Succeeded'
+    Branch = 'Master'
+    Project = 'Fake'
+    Status = 'Succeeded'
+    Commit = '1234567890'
+    BuildId = '1'
 }
 Invoke-RestMethod -Headers @{ Authorization = "Bearer $Token" } -Uri http://localhost:8888/api/toast -Method POST -Body $Body
-
-Invoke-RestMethod -Uri http://localhost:80/api/toast
 
 $Api | Stop-UDRestApi
