@@ -24,7 +24,15 @@
                  'Containing Existential Buffer', 
                  'Deciding What Message to Display Next', 
                  'Increasing Accuracy of RCI Simulators', 
-                 'Perturbing Matrices')
+                 'Perturbing Matrices',
+				 'Initializing the backend',
+				 'Mounting the hard drives',
+				 'Probing for active ports',
+				 'Evaluating the bus width',
+				 'Pushing to the master branch',
+				 'Extracting local packages',
+				 'Satisfying dependencies',
+				 'Exposing internal APIs')
 
     $startTime = Get-Date
     $endTime = $startTime.AddMinutes($countdownTime)
